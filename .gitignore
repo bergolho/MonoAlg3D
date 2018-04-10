@@ -63,3 +63,4 @@ build/
 *~
 .vs/
 *.json
+Ignored-Meshes/
