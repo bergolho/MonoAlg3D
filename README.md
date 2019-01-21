@@ -167,6 +167,13 @@ $ sudo dnf install gtk3-devel gtksourceview3-devel
 
 # Compile
 ----
+Change the current version of GCC to 5.3.0
+```sh
+$ export CC=/usr/bin/gcc53
+$ export CXX=/usr/bin/g++53
+```
+
+Build the binary
 ```sh
 $ mkdir build
 $ cd build
