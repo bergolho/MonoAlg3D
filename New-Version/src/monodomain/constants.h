@@ -19,7 +19,7 @@ typedef float real;
 #define EXPORT_FN 
 #endif
 
-#define ALPHA(beta, cm, dt, dx, dy, dz) ((((beta) * (cm)) / (dt)) * UM2_TO_CM2) * ((dx)*(dy)*(dz))
-
+//#define ALPHA(beta, cm, dt, dx, dy, dz) ((((beta) * (cm)) / (dt)) * UM2_TO_CM2) * ((dx)*(dy)*(dz))
+#define ALPHA(beta, cm, dt, dx, dy, dz) (((1.0) / (dt))) * ((dx)*(dy)*(dz))
 
 #endif //MONOALG3D_CONSTANTS_H
