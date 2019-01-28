@@ -226,17 +226,43 @@ void clean_grid(struct grid *the_grid) {
     assert(the_grid);
     uint32_t number_of_cells = the_grid->number_of_cells;
 
+    struct cell_node *grid_cell = the_grid->first_cell;
+
+    // First delete the cells from the Purkinje network
+    if(grid_cell) 
+    {
+        while (grid_cell) 
+        {
+
+            struct cell_node *next = grid_cell->next;
+            free_cell_node(grid_cell);
+            grid_cell = next;
+
+        }
+    }
+
+    if (the_grid->the_purkinje_network) 
+    {
+        free_graph(the_grid->the_purkinje_network);
+    }
+    
+    // TODO: Think about this function
+    // Then, we will delete the tissue cells
+
     // In order to release the memory allocated for the grid, the grid is
     // derefined to level 1. Thus, the grid shape is known and each node can
     // be easily reached.
-    while(number_of_cells > 8) {
+    /*
+    while(number_of_cells > 8) 
+    {
         derefine_all_grid(the_grid);
         number_of_cells = the_grid->number_of_cells;
     }
 
-    struct cell_node *grid_cell = the_grid->first_cell;
+    grid_cell = the_grid->first_cell;
 
-    if(grid_cell) {
+    if(grid_cell) 
+    {
 
         // Deleting transition nodes.
         free((struct transition_node *)(grid_cell->north));
@@ -247,19 +273,23 @@ void clean_grid(struct grid *the_grid) {
         free((struct transition_node *)(((struct cell_node *)(grid_cell->back))->back));
 
         // Deleting cells nodes.
-        while(grid_cell) {
+        while(grid_cell) 
+        {
 
             struct cell_node *next = grid_cell->next;
             free_cell_node(grid_cell);
             grid_cell = next;
         }
     }
+    */
 
-    if(the_grid->refined_this_step) {
+    if(the_grid->refined_this_step) 
+    {
         sb_clear(the_grid->refined_this_step);
     }
 
-    if(the_grid->free_sv_positions) {
+    if(the_grid->free_sv_positions) 
+    {
         sb_clear(the_grid->free_sv_positions);
     }
 }
@@ -270,7 +300,8 @@ void clean_and_free_grid(struct grid *the_grid) {
 
     clean_grid(the_grid);
 
-    if(the_grid->active_cells) {
+    if(the_grid->active_cells) 
+    {
         free(the_grid->active_cells);
     }
 

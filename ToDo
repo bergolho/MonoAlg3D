@@ -8,7 +8,9 @@ Sachetto
 - Implement compressed data on vtk files https://github.com/lz4/lz4/blob/dev/examples/simple_buffer.c
 
 Berg
-- Finish the 'save_vtk_polydata_grid_as_legacy_vtk' function in the 'save_mesh_library'
+- Fix the binary output in the 'save_vtk_polydata_grid_as_legacy_vtk' function
+- Fix the binary output in the 'save_vtk_polydata_grid_as_vtp' function
+- Implement 'save_vtk_polydata_grid_as_vtu_compressed' function
 
 Pedro
 - Upgrade and refactor the DDM code.

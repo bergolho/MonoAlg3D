@@ -24,6 +24,32 @@ struct vtk_polydata_grid *new_vtk_polydata_grid ()
     return grid;
 }
 
+sds create_common_vtp_header(bool compressed, int num_points, int num_lines) 
+{
+
+    sds header = sdsempty();
+
+    if(compressed) 
+    {
+        header = sdscat(header, "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" "
+                                "header_type=\"UInt64\" compressor=\"vtkZLibDataCompressor\">\n");
+    } 
+    else 
+    {
+        header = sdscat(
+            header,
+            "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+    }
+
+    header = sdscat(header, "  <PolyData>\n");
+
+    header = sdscatprintf(header, "    <Piece NumberOfPoints=\"%d\" NumberOfLines=\"%d\">\n", num_points, num_lines);
+
+    header = sdscat(header, "      <PointData Scalars=\"Scalars_\">\n");
+
+    return header;
+}
+
 void new_vtk_polydata_grid_from_purkinje_grid(struct vtk_polydata_grid **vtk_grid, struct grid *grid, bool clip_with_plain,
                                                                      float *plain_coordinates, bool clip_with_bounds,
                                                                      float *bounds, bool read_only_values)
@@ -131,8 +157,349 @@ void new_vtk_polydata_grid_from_purkinje_grid(struct vtk_polydata_grid **vtk_gri
 
 }
 
-// TODO: Implement this function
-void save_vtk_polydata_grid_as_legacy_vtk(struct vtk_polydata_grid *vtk_grid, char *filename, bool binary)
+// TODO: Saving in binary is buggy ...
+void save_vtk_polydata_grid_as_legacy_vtk(struct vtk_polydata_grid *vtk_grid,\
+                                        char *filename, bool binary)
+{
+    sds file_content = sdsempty();
+
+    file_content = sdscat(file_content, "# vtk DataFile Version 4.2\n");
+    file_content = sdscat(file_content, "vtk output\n");
+    if(binary) 
+    {
+        file_content = sdscat(file_content, "BINARY\n");
+    } 
+    else 
+    {
+        file_content = sdscat(file_content, "ASCII\n");
+    }
+
+    file_content = sdscat(file_content, "DATASET POLYDATA\n");
+    file_content = sdscatprintf(file_content, "POINTS %d float\n", vtk_grid->num_points);
+    
+    size_t size_until_now = sdslen(file_content);
+
+    int num_points = sb_count(vtk_grid->points);
+    for(int i = 0; i < num_points; i++) 
+    {
+        struct point_3d p = vtk_grid->points[i];
+
+        if(binary) 
+        {
+            file_content = write_binary_point(file_content, &p);
+            size_until_now += 3 * sizeof(int);
+        } 
+        else 
+        {
+            file_content = sdscatprintf(file_content, "%lf %lf %lf\n", p.x, p.y, p.z);
+        }
+    }
+
+    int num_lines = vtk_grid->num_lines;
+    
+    {
+        sds tmp = sdscatprintf(sdsempty(), "\nLINES %d %d\n", num_lines, 3 * num_lines);
+        
+        size_until_now += sdslen(tmp);
+        
+        file_content = sdscatsds(file_content, tmp);
+        sdsfree(tmp);
+    }
+
+    for (int i = 0; i < num_lines; i++)
+    {
+        struct line l = vtk_grid->lines[i];
+
+        if (binary)
+        {
+            file_content = write_binary_line(file_content, &l);
+            size_until_now += 3 * sizeof(int);
+        }
+        else
+        {
+            file_content = sdscatprintf(file_content, "2 %d %d\n",l.source,l.destination);
+        }
+        
+    }
+
+    int num_values = sb_count(vtk_grid->values);
+
+    {
+        sds tmp = sdscatprintf(sdsempty(), "POINT_DATA %d\n", num_values);
+        tmp = sdscat(tmp, "SCALARS Vm float\n");
+        tmp = sdscat(tmp, "LOOKUP_TABLE default\n");
+
+        size_until_now += sdslen(tmp);
+
+        file_content = sdscatsds(file_content, tmp);
+        sdsfree(tmp);
+    }
+
+    for (int i = 0; i < num_values; i++)
+    {
+        if(binary) 
+        {
+            int aux = invert_bytes(*((int *)&(vtk_grid->values[i])));
+            file_content = sdscatlen(file_content, &aux, sizeof(int));
+            size_until_now += sizeof(int);
+        } 
+        else 
+        {
+            file_content = sdscatprintf(file_content, "%lf ", vtk_grid->values[i]);
+        }
+    }
+
+    FILE *output_file = fopen(filename, "w");
+    if(binary) 
+    {
+        fwrite(file_content, size_until_now, 1, output_file);
+    } 
+    else 
+    {
+        fprintf(output_file, "%s", file_content);
+    }
+    sdsfree(file_content);
+    fclose(output_file);
+
+}
+
+void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *filename, bool binary)
 {
 
+    size_t offset = 0;
+
+    sds file_content = create_common_vtp_header(false, vtk_grid->num_points, vtk_grid->num_lines);
+
+    if(binary) 
+    {
+        file_content = sdscat(
+            file_content,
+            "        <DataArray type=\"Float32\" Name=\"Scalars_\" format=\"appended\" offset=\"0\">\n"); // First
+                                                                                                          // offset is
+                                                                                                          // always 0
+
+    } 
+    else 
+    {
+        file_content =
+            sdscat(file_content, "        <DataArray type=\"Float32\" Name=\"Scalars_\" format=\"ascii\">\n");
+    }
+
+    if(!binary) 
+    {
+        size_t num_values = sb_count(vtk_grid->values);
+
+        for(int i = 0; i < num_values; i++) 
+        {
+            file_content = sdscatprintf(file_content, "     %lf ", vtk_grid->values[i]);
+        }
+    }
+
+    file_content = sdscat(file_content, "        </DataArray>\n");
+    file_content = sdscat(file_content, "      </PointData>\n");
+
+    // TODO: Fix this ...
+    offset = (vtk_grid->num_lines * 4) + 8;
+
+    file_content = sdscat(file_content, "      <Points>\n");
+
+    if(binary) 
+    {
+        file_content = sdscatprintf(file_content,
+                                    "        <DataArray type=\"Float32\" Name=\"Points\" "
+                                    "NumberOfComponents=\"3\" format=\"appended\" offset=\"%zu\">\n",
+                                    offset);
+
+    } 
+    else 
+    {
+        file_content =
+            sdscat(file_content,
+                   "        <DataArray type=\"Float32\" Name=\"Points\" NumberOfComponents=\"3\" format=\"ascii\">\n");
+    }
+
+    if(!binary) 
+    {
+        int num_points = sb_count(vtk_grid->points);
+        for(int i = 0; i < num_points; i++) 
+        {
+            struct point_3d p = vtk_grid->points[i];
+            file_content = sdscatprintf(file_content, "%lf %lf %lf\n", p.x, p.y, p.z);
+        }
+    }
+
+    file_content = sdscat(file_content, "        </DataArray>\n");
+    file_content = sdscat(file_content, "      </Points>\n");
+
+    file_content = sdscat(file_content, "      <Lines>\n");
+
+    // TODO: Fix this ...
+    offset += (vtk_grid->num_points * 4 * 3) + 8; // 3*32 bits float for each point
+
+    if(binary) 
+    {
+        file_content = sdscatprintf(
+            file_content,
+            "        <DataArray type=\"Int64\" Name=\"connectivity\" format=\"appended\" offset=\"%zu\">\n", offset);
+
+    } 
+    else 
+    {
+        file_content =
+            sdscat(file_content, "        <DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">\n");
+    }
+
+    int num_lines = vtk_grid->num_lines;
+
+    if(!binary) 
+    {
+        for(int i = 0; i < num_lines; i++) 
+        {
+            file_content = sdscatprintf(file_content,"%d %d\n",vtk_grid->lines[i].source,vtk_grid->lines[i].destination);
+        }
+    }
+
+    file_content = sdscat(file_content, "        </DataArray>\n");
+
+    // TODO: Fix this
+    offset += (vtk_grid->num_lines * 8) + 8; // 64 bits
+
+    if(binary) 
+    {
+        file_content = sdscatprintf(
+            file_content, "        <DataArray type=\"Int64\" Name=\"offsets\" format=\"appended\" offset=\"%zu\">\n",
+            offset);
+    } 
+    else 
+    {
+        file_content = sdscat(file_content, "        <DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n");
+    }
+
+    {
+        int offset_local = 2;
+
+        if(!binary) 
+        {
+            for(int i = 0; i < num_lines; i++) 
+            {
+                file_content = sdscat(file_content, "     ");
+                file_content = sdscatprintf(file_content, "%d ", offset_local);
+                offset_local += 2;
+                file_content = sdscat(file_content, "\n");
+            }
+        }
+    }
+
+    file_content = sdscat(file_content, "        </DataArray>\n");
+    file_content = sdscat(file_content, "      </Lines>\n");
+
+
+    // Fix this ...
+    offset += (vtk_grid->num_lines * 8) + 8; // 64 bits
+
+    file_content = sdscat(file_content, "    </Piece>\n");
+    file_content = sdscat(file_content, "  </PolyData>\n");
+
+    size_t size_until_now = 0;
+
+    // TODO: Implement this
+    /*
+    if(binary) 
+    {
+        file_content = sdscat(file_content, "  <AppendedData encoding=\"raw\">\n   _");
+
+        size_until_now = sdslen(file_content);
+
+        // scalars
+        uint64_t block_size = sizeof(float) * vtk_grid->num_cells;
+        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
+        file_content = sdscatlen(file_content, vtk_grid->values, (size_t)block_size);
+        size_until_now += (sizeof(float) * vtk_grid->num_cells + sizeof(uint64_t));
+
+        // Points
+        block_size = sizeof(struct point_3d) * vtk_grid->num_points;
+        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
+        file_content = sdscatlen(file_content, vtk_grid->points, (size_t)block_size);
+        size_until_now += (sizeof(struct point_3d) * vtk_grid->num_points + sizeof(uint64_t));
+
+        // connectivity
+        block_size = num_cells * points_per_cell * sizeof(int64_t);
+        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
+        size_until_now += sizeof(uint64_t);
+
+        for(int i = 0; i < num_cells; i++) {
+            for(int j = 0; j < points_per_cell; j++) {
+                int64_t aux = (int64_t)vtk_grid->cells[points_per_cell * i + j];
+                file_content = sdscatlen(file_content, &aux, sizeof(int64_t));
+                size_until_now += sizeof(int64_t);
+            }
+        }
+
+        // offsets
+        block_size = num_cells * sizeof(int64_t);
+        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
+        size_until_now += sizeof(uint64_t);
+
+        int64_t offset_local = 8;
+        for(int i = 0; i < num_cells; i++) {
+            file_content = sdscatlen(file_content, &offset_local, sizeof(int64_t));
+            offset_local += 8;
+            size_until_now += sizeof(int64_t);
+        }
+
+        // types
+        block_size = num_cells * sizeof(uint8_t);
+        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
+        size_until_now += sizeof(uint64_t);
+
+        for(int i = 0; i < num_cells; i++) {
+            uint8_t aux = (uint8_t)cell_type;
+            file_content = sdscatlen(file_content, &aux, sizeof(uint8_t));
+            size_until_now += sizeof(uint8_t);
+        }
+
+        file_content = sdscat(file_content, "\n  </AppendedData>\n");
+    }
+    */
+
+    file_content = sdscat(file_content, "</VTKFile>\n");
+
+    // Fix this ...
+    size_until_now += 29;
+
+    FILE *output_file = NULL;
+
+    if(binary) 
+    {
+        output_file = fopen(filename, "wb");
+        fwrite(file_content, size_until_now, 1, output_file);
+    } 
+    else 
+    {
+        output_file = fopen(filename, "w");
+        fprintf(output_file, "%s", file_content);
+    }
+
+    sdsfree(file_content);
+    fclose(output_file);
+
+}
+
+void save_vtk_polydata_grid_as_vtp_compressed (struct vtk_polydata_grid *vtk_grid, char *filename, int compression_level)
+{
+    printf("\tIn 'save_vtk_polydata_grid_as_vtp_compressed'\n");
+
+    printf("\tLeaving 'save_vtk_polydata_grid_as_vtp_compressed'\n");
+}
+
+
+
+void free_vtk_polydata_grid(struct vtk_polydata_grid *vtk_grid)
+{
+    if(vtk_grid) 
+    {
+        sb_free(vtk_grid->lines);
+        sb_free(vtk_grid->values);
+        sb_free(vtk_grid->points);
+    }
 }

@@ -358,7 +358,6 @@ void solve_monodomain(struct monodomain_solver *the_monodomain_solver, struct od
     double cur_time = the_monodomain_solver->current_time;
 
     print_to_stdout_and_file("Starting simulation\n");
-    // OK
 
     // Main simulation loop start
     while(cur_time <= finalT) 
@@ -368,7 +367,6 @@ void solve_monodomain(struct monodomain_solver *the_monodomain_solver, struct od
         redraw = count % print_rate == 0; // redraw grid
 #endif
 
-        // I am working here !!! 
         if(save_to_file && (count % print_rate == 0)) 
         {
 
@@ -422,44 +420,54 @@ void solve_monodomain(struct monodomain_solver *the_monodomain_solver, struct od
 
         total_cg_it += solver_iterations;
 
-        if(count % print_rate == 0) {
+        if(count % print_rate == 0) 
+        {
             print_to_stdout_and_file("t = %lf, Iterations = "
                                      "%" PRIu32 ", Error Norm = %e, Number of Cells:"
                                      "%" PRIu32 ", Iterations time: %ld us\n",
                                      cur_time, solver_iterations, solver_error, the_grid->num_active_cells, cg_partial);
         }
 
-        if(adaptive) {
+        if(adaptive) 
+        {
 
             redo_matrix = false;
-            if(cur_time >= start_adpt_at) {
-                if(count % refine_each == 0) {
+            if(cur_time >= start_adpt_at) 
+            {
+                if(count % refine_each == 0) 
+                {
                     start_stop_watch(&ref_time);
                     redo_matrix = refine_grid_with_bound(the_grid, refinement_bound, start_dx, start_dy, start_dz);
                     total_ref_time += stop_stop_watch(&ref_time);
                 }
 
-                if(count % derefine_each == 0) {
+                if(count % derefine_each == 0) 
+                {
                     start_stop_watch(&deref_time);
                     redo_matrix |= derefine_grid_with_bound(the_grid, derefinement_bound, max_dx, max_dy, max_dz);
                     total_deref_time += stop_stop_watch(&deref_time);
                 }
             }
-            if(redo_matrix) {
+            if(redo_matrix) 
+            {
                 order_grid_cells(the_grid);
 
-                if(stimuli_configs) {
-                    if(cur_time <= last_stimulus_time || has_any_periodic_stim) {
+                if(stimuli_configs) 
+                {
+                    if(cur_time <= last_stimulus_time || has_any_periodic_stim) 
+                    {
                         set_spatial_stim(stimuli_configs, the_grid);
                     }
                 }
-                if(has_extra_data) {
+                if(has_extra_data) 
+                {
                     set_ode_extra_data(extra_data_config, the_grid, the_ode_solver);
                 }
 
                 update_cells_to_solve(the_grid, the_ode_solver);
 
-                if(sb_count(the_grid->refined_this_step) > 0) {
+                if(sb_count(the_grid->refined_this_step) > 0) 
+                {
                     update_state_vectors_after_refinement(the_ode_solver, the_grid->refined_this_step);
                 }
 
@@ -473,8 +481,10 @@ void solve_monodomain(struct monodomain_solver *the_monodomain_solver, struct od
         count++;
         cur_time += dt_pde;
 
-        if(save_checkpoint) {
-            if(count != 0 && (count % save_state_rate == 0)) {
+        if(save_checkpoint) 
+        {
+            if(count != 0 && (count % save_state_rate == 0)) 
+            {
                 the_monodomain_solver->current_count = count;
                 the_monodomain_solver->current_time = cur_time;
                 printf("Saving state with time = %lf, and count = %d\n", the_monodomain_solver->current_time,
