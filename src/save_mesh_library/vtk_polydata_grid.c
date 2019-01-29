@@ -475,6 +475,7 @@ void save_vtk_polydata_grid_as_vtp_compressed (struct vtk_polydata_grid *vtk_gri
     printf("\tIn 'save_vtk_polydata_grid_as_vtp_compressed'\n");
 
     printf("\tLeaving 'save_vtk_polydata_grid_as_vtp_compressed'\n");
+    exit(EXIT_FAILURE);
 }
 
 
