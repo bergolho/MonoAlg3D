@@ -10,8 +10,8 @@
 
 struct line 
 {
-    uint32_t source;
-    uint32_t destination;
+    uint64_t source;
+    uint64_t destination;
 };
 
 struct vtk_polydata_grid

@@ -104,8 +104,12 @@ sds write_binary_point(sds output_string, struct point_3d *p) {
 
 sds write_binary_line (sds output_string, struct line *l) 
 {
-    int a = *(int *)&(l->source);
+    int a = 2;
     int swapped = invert_bytes(a);
+    output_string = sdscatlen(output_string, &swapped, sizeof(int));
+
+    a = *(int *)&(l->source);
+    swapped = invert_bytes(a);
 
     output_string = sdscatlen(output_string, &swapped, sizeof(int));
 

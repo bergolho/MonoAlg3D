@@ -157,7 +157,6 @@ void new_vtk_polydata_grid_from_purkinje_grid(struct vtk_polydata_grid **vtk_gri
 
 }
 
-// TODO: Saving in binary is buggy ...
 void save_vtk_polydata_grid_as_legacy_vtk(struct vtk_polydata_grid *vtk_grid,\
                                         char *filename, bool binary)
 {
@@ -217,7 +216,7 @@ void save_vtk_polydata_grid_as_legacy_vtk(struct vtk_polydata_grid *vtk_grid,\
         }
         else
         {
-            file_content = sdscatprintf(file_content, "2 %d %d\n",l.source,l.destination);
+            file_content = sdscatprintf(file_content, "2 %lu %lu\n",l.source,l.destination);
         }
         
     }
@@ -249,15 +248,19 @@ void save_vtk_polydata_grid_as_legacy_vtk(struct vtk_polydata_grid *vtk_grid,\
         }
     }
 
-    FILE *output_file = fopen(filename, "w");
+    FILE *output_file = NULL;
+
     if(binary) 
     {
+        output_file = fopen(filename, "wb");
         fwrite(file_content, size_until_now, 1, output_file);
     } 
     else 
     {
+        output_file = fopen(filename, "w");
         fprintf(output_file, "%s", file_content);
     }
+
     sdsfree(file_content);
     fclose(output_file);
 
@@ -285,9 +288,10 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
             sdscat(file_content, "        <DataArray type=\"Float32\" Name=\"Scalars_\" format=\"ascii\">\n");
     }
 
+    size_t num_values = sb_count(vtk_grid->values);
+
     if(!binary) 
     {
-        size_t num_values = sb_count(vtk_grid->values);
 
         for(int i = 0; i < num_values; i++) 
         {
@@ -298,8 +302,7 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
     file_content = sdscat(file_content, "        </DataArray>\n");
     file_content = sdscat(file_content, "      </PointData>\n");
 
-    // TODO: Fix this ...
-    offset = (vtk_grid->num_lines * 4) + 8;
+    offset = (num_values * 4) + 8;
 
     file_content = sdscat(file_content, "      <Points>\n");
 
@@ -333,7 +336,6 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
 
     file_content = sdscat(file_content, "      <Lines>\n");
 
-    // TODO: Fix this ...
     offset += (vtk_grid->num_points * 4 * 3) + 8; // 3*32 bits float for each point
 
     if(binary) 
@@ -355,14 +357,13 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
     {
         for(int i = 0; i < num_lines; i++) 
         {
-            file_content = sdscatprintf(file_content,"%d %d\n",vtk_grid->lines[i].source,vtk_grid->lines[i].destination);
+            file_content = sdscatprintf(file_content,"%lu %lu\n",vtk_grid->lines[i].source,vtk_grid->lines[i].destination);
         }
     }
 
     file_content = sdscat(file_content, "        </DataArray>\n");
 
-    // TODO: Fix this
-    offset += (vtk_grid->num_lines * 8) + 8; // 64 bits
+    offset += (vtk_grid->num_lines * 2 * 8) + 8; // 64 bits for the line index
 
     if(binary) 
     {
@@ -394,7 +395,6 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
     file_content = sdscat(file_content, "      </Lines>\n");
 
 
-    // Fix this ...
     offset += (vtk_grid->num_lines * 8) + 8; // 64 bits
 
     file_content = sdscat(file_content, "    </Piece>\n");
@@ -402,8 +402,6 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
 
     size_t size_until_now = 0;
 
-    // TODO: Implement this
-    /*
     if(binary) 
     {
         file_content = sdscat(file_content, "  <AppendedData encoding=\"raw\">\n   _");
@@ -411,10 +409,10 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
         size_until_now = sdslen(file_content);
 
         // scalars
-        uint64_t block_size = sizeof(float) * vtk_grid->num_cells;
+        uint64_t block_size = sizeof(float) * vtk_grid->num_points;
         file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
         file_content = sdscatlen(file_content, vtk_grid->values, (size_t)block_size);
-        size_until_now += (sizeof(float) * vtk_grid->num_cells + sizeof(uint64_t));
+        size_until_now += (sizeof(float) * vtk_grid->num_points + sizeof(uint64_t));
 
         // Points
         block_size = sizeof(struct point_3d) * vtk_grid->num_points;
@@ -423,48 +421,35 @@ void save_vtk_polydata_grid_as_vtp (struct vtk_polydata_grid *vtk_grid, char *fi
         size_until_now += (sizeof(struct point_3d) * vtk_grid->num_points + sizeof(uint64_t));
 
         // connectivity
-        block_size = num_cells * points_per_cell * sizeof(int64_t);
+        block_size = vtk_grid->num_lines * 2 * sizeof(uint64_t);
         file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
-        size_until_now += sizeof(uint64_t);
-
-        for(int i = 0; i < num_cells; i++) {
-            for(int j = 0; j < points_per_cell; j++) {
-                int64_t aux = (int64_t)vtk_grid->cells[points_per_cell * i + j];
-                file_content = sdscatlen(file_content, &aux, sizeof(int64_t));
-                size_until_now += sizeof(int64_t);
-            }
+        for(int i = 0; i < num_lines; i++) 
+        {
+            uint64_t source = (uint64_t)vtk_grid->lines[i].source;
+            uint64_t destination = (uint64_t)vtk_grid->lines[i].destination;
+            file_content = sdscatlen(file_content, &source, sizeof(uint64_t));
+            file_content = sdscatlen(file_content, &destination, sizeof(uint64_t));
+            size_until_now += sizeof(uint64_t) * 2;
         }
 
         // offsets
-        block_size = num_cells * sizeof(int64_t);
+        block_size = vtk_grid->num_lines * sizeof(int64_t);
         file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
-        size_until_now += sizeof(uint64_t);
+        size_until_now += sizeof(int64_t);
 
-        int64_t offset_local = 8;
-        for(int i = 0; i < num_cells; i++) {
+        int64_t offset_local = 2;
+        for(int i = 0; i < vtk_grid->num_lines; i++) 
+        {
             file_content = sdscatlen(file_content, &offset_local, sizeof(int64_t));
-            offset_local += 8;
+            offset_local += 2;
             size_until_now += sizeof(int64_t);
-        }
-
-        // types
-        block_size = num_cells * sizeof(uint8_t);
-        file_content = sdscatlen(file_content, &block_size, sizeof(uint64_t));
-        size_until_now += sizeof(uint64_t);
-
-        for(int i = 0; i < num_cells; i++) {
-            uint8_t aux = (uint8_t)cell_type;
-            file_content = sdscatlen(file_content, &aux, sizeof(uint8_t));
-            size_until_now += sizeof(uint8_t);
         }
 
         file_content = sdscat(file_content, "\n  </AppendedData>\n");
     }
-    */
 
     file_content = sdscat(file_content, "</VTKFile>\n");
 
-    // Fix this ...
     size_until_now += 29;
 
     FILE *output_file = NULL;
