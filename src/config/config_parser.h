@@ -26,9 +26,10 @@
 #include "assembly_matrix_config.h"
 #include "save_mesh_config.h"
 #include "linear_system_solver_config.h"
-#include "../hash/stim_config_hash.h"
+#include "../common_types/common_types.h"
 #include "save_state_config.h"
 #include "restore_state_config.h"
+#include "update_monodomain_config.h"
 
 #define START_REFINING 1700
 #define DOMAIN_OPT 1800
@@ -36,25 +37,29 @@
 #define STIM_OPT 2000
 #define ASSEMBLY_MATRIX_OPT 2100
 #define LINEAR_SYSTEM_SOLVER_OPT 2200
+#define UPDATE_MONODOMAIN_SOLVER_OPT 2300
 #define DRAW_OPT 3000
 #define SAVE_OPT 3100
 #define SAVE_STATE_OPT 3200
 #define RESTORE_STATE_OPT 3300
+#define MAX_V_OPT 3400
+#define MIN_V_OPT 3500
 #define BETA 4000
 #define CM 5000
+#define VISUALIZATION_PAUSED_OPT 5100
 
 struct user_options {
-    float final_time;				/*-f option */
+    real_cpu final_time;				/*-f option */
     bool final_time_was_set;
     bool adaptive;	                /*-a option */
     bool adaptive_was_set;
-    float ref_bound;				/*-r option*/
+    real_cpu ref_bound;				/*-r option*/
     bool ref_bound_was_set;
-    float deref_bound;				/*-d option*/
+    real_cpu deref_bound;				/*-d option*/
     bool deref_bound_was_set;
-    float dt_pde;					/*-z option*/
+    real_cpu dt_pde;					/*-z option*/
     bool dt_pde_was_set;
-    float dt_ode;				    /*-e option*/
+    real_cpu dt_ode;				    /*-e option*/
     bool dt_ode_was_set;
     int num_threads;                /*-n option*/
     bool num_threads_was_set;
@@ -68,7 +73,7 @@ struct user_options {
     bool gpu_id_was_set;
     bool abort_no_activity;         /*-b option*/
     bool abort_no_activity_was_set;
-    float vm_threshold;            /*-v option*/
+    real_cpu vm_threshold;            /*-v option*/
     bool vm_threshold_was_set;
 
     char *model_file_path;          /*-k option*/
@@ -76,17 +81,22 @@ struct user_options {
 
     bool draw;
 
-    float beta;
+    real_cpu beta;
     bool beta_was_set;
 
-    float cm;
+    real_cpu cm;
     bool cm_was_set;
 
-    float start_adapting_at;
+    real_cpu start_adapting_at;
     bool start_adapting_at_was_set;
     char *config_file;              /*-c option*/
 
-    struct stim_config_hash *stim_configs;
+    bool quiet; /*-q option*/
+    bool quiet_was_set;
+
+    bool start_visualization_unpaused;
+
+    struct string_voidp_hash_entry *stim_configs;
     struct domain_config *domain_config;
     struct purkinje_config *purkinje_config;
     struct extra_data_config *extra_data_config;
@@ -95,6 +105,10 @@ struct user_options {
     struct save_mesh_config *save_mesh_config;
     struct save_state_config *save_state_config;
     struct restore_state_config *restore_state_config;
+    struct update_monodomain_config *update_monodomain_config;
+
+    real_cpu max_v, min_v;
+
 
     bool main_found;
 
@@ -106,7 +120,7 @@ struct batch_options {
     char *initial_config;
     int num_simulations;
     int num_par_change;
-    struct string_hash *config_to_change;
+    struct string_hash_entry *config_to_change;
 };
 
 void display_usage( char** argv );

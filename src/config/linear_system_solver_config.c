@@ -11,6 +11,8 @@
 #endif
 #include <string.h>
 #include "../utils/file_utils.h"
+#include "../common_types/common_types.h"
+#include "../single_file_libraries/stb_ds.h"
 
 void init_linear_system_solver_functions(struct linear_system_solver_config *config) {
 
@@ -42,13 +44,11 @@ void init_linear_system_solver_functions(struct linear_system_solver_config *con
     if(function_name){
         config->solve_linear_system = dlsym(config->config_data.handle, function_name);
         if (dlerror() != NULL)  {
-            fprintf(stderr, "\n%s function not found in the provided linear_system_solver library\n", function_name);
-            exit(EXIT_FAILURE);
+            print_to_stderr_and_file_and_exit("\n%s function not found in the provided linear_system_solver library\n", function_name);
         }
     }
     else {
-        fprintf(stderr, "No function name for matrix assembly library provided. Exiting!\n");
-        exit(EXIT_FAILURE);
+        print_to_stderr_and_file_and_exit("No function name for matrix assembly library provided. Exiting!\n");
     }
 
 }
@@ -72,11 +72,6 @@ void print_linear_system_solver_config_values(struct linear_system_solver_config
 
 void free_linear_system_solver_config(struct linear_system_solver_config* s) {
 
-    free(s->config_data.library_file_path);
-    free(s->config_data.function_name);
-    string_hash_destroy(s->config_data.config);
-
-    if(s->config_data.handle)
-        dlclose(s->config_data.handle);
+    free_config_common_data(&(s->config_data));
     free(s);
 }

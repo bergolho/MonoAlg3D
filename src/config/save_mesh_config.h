@@ -2,8 +2,8 @@
 // Created by sachetto on 13/10/17.
 //
 
-#ifndef MONOALG3D_SAVE_CONFIG_H
-#define MONOALG3D_SAVE_CONFIG_H
+#ifndef MONOALG3D_SAVE_MESH_CONFIG_H
+#define MONOALG3D_SAVE_MESH_CONFIG_H
 
 #include "config_common.h"
 #include "../monodomain/constants.h"
@@ -12,12 +12,13 @@
 //Forward declaration
 struct save_mesh_config;
 
-#define SAVE_MESH(name) EXPORT_FN void name(double current_dt, struct save_mesh_config *config, struct grid *the_grid)
+#define SAVE_MESH(name) EXPORT_FN void name(int iteration_count, real_cpu current_dt, struct save_mesh_config *config, struct grid *the_grid)
 typedef SAVE_MESH(save_mesh_fn);
 
 struct save_mesh_config {
     struct config_common config_data;
     int print_rate;
+    int last_count;
     bool print_rate_was_set;
     char * out_dir_name;
     bool out_dir_name_was_set;
@@ -31,4 +32,4 @@ void free_save_mesh_config(struct save_mesh_config* s);
 void print_save_mesh_config_values(struct save_mesh_config* s);
 
 
-#endif //MONOALG3D_SAVE_CONFIG_H
+#endif //MONOALG3D_SAVE_MESH_CONFIG_H

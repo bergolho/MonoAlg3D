@@ -12,10 +12,16 @@
 #endif
 #include <assert.h>
 #include "../utils/file_utils.h"
+#include "../config/stim_config.h"
 
 #ifdef COMPILE_CUDA
 #include "../gpu_utils/gpu_utils.h"
+#include "../single_file_libraries/stb_ds.h"
+
 #endif
+
+#include "../single_file_libraries/stb_ds.h"
+
 
 
 struct ode_solver* new_ode_solver() {
@@ -201,8 +207,8 @@ void set_ode_initial_conditions_for_all_volumes(struct ode_solver *solver) {
     }
 }
 
-void solve_all_volumes_odes(struct ode_solver *the_ode_solver, uint32_t n_active, double cur_time, int num_steps,
-                            struct stim_config_hash *stim_configs) {
+void solve_all_volumes_odes(struct ode_solver *the_ode_solver, uint32_t n_active, real_cpu cur_time, int num_steps,
+                            struct string_voidp_hash_entry *stim_configs) {
 
     assert(the_ode_solver->sv);
 
@@ -211,9 +217,8 @@ void solve_all_volumes_odes(struct ode_solver *the_ode_solver, uint32_t n_active
     real *sv = the_ode_solver->sv;
 
     void *extra_data = the_ode_solver->ode_extra_data;
-    size_t extra_data_size = the_ode_solver->extra_data_size;
 
-    double time = cur_time;
+    real_cpu time = cur_time;
 
     real *merged_stims = (real*)calloc(sizeof(real), n_active);
 
@@ -221,11 +226,11 @@ void solve_all_volumes_odes(struct ode_solver *the_ode_solver, uint32_t n_active
     real stim_start, stim_dur;
 
 	int i;
+    ptrdiff_t n = hmlen(stim_configs);
 
     if(stim_configs) {
-        for (int k = 0; k < stim_configs->size; k++) {
-            for (struct stim_config_elt *e = stim_configs->table[k % stim_configs->size]; e != 0; e = e->next) {
-                tmp = e->value;
+        for (int k = 0; k < n; k++) {
+                tmp = (struct stim_config*) stim_configs[k].value;
                 stim_start = tmp->stim_start;
                 stim_dur = tmp->stim_duration;
                 for (int j = 0; j < num_steps; ++j) {
@@ -244,17 +249,18 @@ void solve_all_volumes_odes(struct ode_solver *the_ode_solver, uint32_t n_active
 
                 time = cur_time;
             }
-        }
+
     }
 
 
     if(the_ode_solver->gpu) {
-#ifdef COMPILE_CUDA
+        #ifdef COMPILE_CUDA
+        size_t extra_data_size = the_ode_solver->extra_data_size;
         solve_model_ode_gpu_fn *solve_odes_pt = the_ode_solver->solve_model_ode_gpu;
         solve_odes_pt(dt, sv, merged_stims, the_ode_solver->cells_to_solve, n_active, num_steps, extra_data,
                       extra_data_size);
 
-#endif
+        #endif
     }
     else {
         solve_model_ode_cpu_fn *solve_odes_pt = the_ode_solver->solve_model_ode_cpu;
@@ -269,7 +275,7 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
     assert(ode_solver);
     assert(ode_solver->sv);
 
-    size_t num_refined_cells = sb_count(refined_this_step)/8;
+    size_t num_refined_cells = arrlen(refined_this_step)/8;
 
     real *sv = ode_solver->sv;
     int neq = ode_solver->model_data.number_of_ode_equations;
@@ -279,7 +285,7 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
 
 
     if(ode_solver->gpu) {
-#ifdef COMPILE_CUDA
+        #ifdef COMPILE_CUDA
 
         size_t pitch_h = ode_solver->pitch;
 
@@ -296,11 +302,9 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
                 sv_dst = &sv[index];
                 check_cuda_errors(cudaMemcpy2D(sv_dst, pitch_h, sv_src, pitch_h, sizeof(real), (size_t )neq, cudaMemcpyDeviceToDevice));
             }
-
-
         }
 
-#endif
+        #endif
     }
     else {
 

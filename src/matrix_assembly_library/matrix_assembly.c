@@ -12,28 +12,29 @@
 #include "../libraries_common/config_helpers.h"
 #include "../monodomain/constants.h"
 #include "../utils/utils.h"
+#include "../single_file_libraries/stb_ds.h"
 
-static struct element fill_element(uint32_t position, char direction, double dx, double dy, double dz, double sigma_x1,
-                                   double sigma_x2, double sigma_y1, double sigma_y2, double sigma_z1, double sigma_z2,
+static struct element fill_element(uint32_t position, char direction, real_cpu dx, real_cpu dy, real_cpu dz, real_cpu sigma_x1,
+                                   real_cpu sigma_x2, real_cpu sigma_y1, real_cpu sigma_y2, real_cpu sigma_z1, real_cpu sigma_z2,
                                    struct element *cell_elements);
 
-double calculate_kappa (const real cell_length, const real h)
+real_cpu calculate_kappa (const real cell_length, const real h)
 {
     return (pow(cell_length,4) - pow(h,4)) / (12.0*pow(cell_length,2));
 }
 
 void initialize_diagonal_elements_ddm (struct monodomain_solver *the_solver, struct grid *the_grid,\
-                                    const double dx, const double dy, const double dz,\
-                                    const double kappa_x, const double kappa_y, const double kappa_z,\
-                                    const double sigma_x, const double sigma_y, const double sigma_z)
+                                    const real_cpu dx, const real_cpu dy, const real_cpu dz,\
+                                    const real_cpu kappa_x, const real_cpu kappa_y, const real_cpu kappa_z,\
+                                    const real_cpu sigma_x, const real_cpu sigma_y, const real_cpu sigma_z)
 {
-    double alpha;
+    real_cpu alpha;
     uint32_t num_active_cells = the_grid->num_active_cells;
     struct cell_node **ac = the_grid->active_cells;
-    double beta = the_solver->beta;
-    double cm = the_solver->cm;
+//    double beta = the_solver->beta;
+//    double cm = the_solver->cm;
 
-    double dt = the_solver->dt;
+    real_cpu dt = the_solver->dt;
 
     int i;
 
@@ -46,28 +47,27 @@ void initialize_diagonal_elements_ddm (struct monodomain_solver *the_solver, str
         element.column = ac[i]->grid_position;
         element.cell = ac[i];
         element.value = alpha;
-        //printf("Cell %d -- value = %.10lf\n",i,element.value);
 
         if(ac[i]->elements)
-            sb_free(ac[i]->elements);
+            arrfree(ac[i]->elements);
 
         ac[i]->elements = NULL;
 
-        sb_reserve(ac[i]->elements, 7);
-        sb_push(ac[i]->elements, element);
+        arrsetcap(ac[i]->elements, 7);
+        arrput(ac[i]->elements, element);
         
     }
 
 }
 
-struct element fill_element_ddm (uint32_t position, char direction, double dx, double dy, double dz,\
-                                 double sigma_x1, double sigma_x2, double sigma_y1, double sigma_y2, double sigma_z1, double sigma_z2,\
-                                 const double kappa_x, const double kappa_y, const double kappa_z,\
-                                 const double dt,\
+struct element fill_element_ddm (uint32_t position, char direction, real_cpu dx, real_cpu dy, real_cpu dz,\
+                                 real_cpu sigma_x1, real_cpu sigma_x2, real_cpu sigma_y1, real_cpu sigma_y2, real_cpu sigma_z1, real_cpu sigma_z2,\
+                                 const real_cpu kappa_x, const real_cpu kappa_y, const real_cpu kappa_z,\
+                                 const real_cpu dt,\
                                 struct element *cell_elements) 
 {
 
-    double multiplier;
+    real_cpu multiplier;
 
     struct element new_element;
     new_element.column = position;
@@ -119,22 +119,22 @@ struct element fill_element_ddm (uint32_t position, char direction, double dx, d
     return new_element;
 }
 
-static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigma_y, double sigma_z,
-                                                const double kappa_x, const double kappa_y, const double kappa_z,
-                                                const double dt,
+static void fill_discretization_matrix_elements_ddm (real_cpu sigma_x, real_cpu sigma_y, real_cpu sigma_z,
+                                                const real_cpu kappa_x, const real_cpu kappa_y, const real_cpu kappa_z,
+                                                const real_cpu dt,
                                                 struct cell_node *grid_cell, void *neighbour_grid_cell,
                                                 char direction) 
 {
 
     uint32_t position;
     bool has_found;
-    double dx, dy, dz;
+    real_cpu dx, dy, dz;
 
     struct transition_node *white_neighbor_cell;
     struct cell_node *black_neighbor_cell;
 
-    double sigma_x1 = 0.0;
-    double sigma_x2 = 0.0;
+    real_cpu sigma_x1 = 0.0;
+    real_cpu sigma_x2 = 0.0;
 
     if(sigma_x != 0.0) 
     {
@@ -142,8 +142,8 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
         sigma_x2 = (2.0f * sigma_x * sigma_x) / (sigma_x + sigma_x);
     }
 
-    double sigma_y1 = 0.0;
-    double sigma_y2 = 0.0;
+    real_cpu sigma_y1 = 0.0;
+    real_cpu sigma_y2 = 0.0;
 
     if(sigma_y != 0.0) 
     {
@@ -151,8 +151,8 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
         sigma_y2 = (2.0f * sigma_y * sigma_y) / (sigma_y + sigma_y);
     }
 
-    double sigma_z1 = 0.0;
-    double sigma_z2 = 0.0;
+    real_cpu sigma_z1 = 0.0;
+    real_cpu sigma_z2 = 0.0;
 
     if(sigma_z != 0.0) 
     {
@@ -248,7 +248,7 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
             struct element *cell_elements = grid_cell->elements;
             position = black_neighbor_cell->grid_position;
 
-            size_t max_elements = sb_count(cell_elements);
+            size_t max_elements = arrlen(cell_elements);
             bool insert = true;
 
             for(size_t i = 1; i < max_elements; i++) 
@@ -269,7 +269,7 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
                                             cell_elements);
 
                 new_element.cell = black_neighbor_cell;
-                sb_push(grid_cell->elements, new_element);
+                arrput(grid_cell->elements, new_element);
             }
             unlock_cell_node(grid_cell);
 
@@ -277,7 +277,7 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
             cell_elements = black_neighbor_cell->elements;
             position = grid_cell->grid_position;
 
-            max_elements = sb_count(cell_elements);
+            max_elements = arrlen(cell_elements);
 
             insert = true;
             for(size_t i = 1; i < max_elements; i++) 
@@ -298,7 +298,7 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
                                             cell_elements);
 
                 new_element.cell = grid_cell;
-                sb_push(black_neighbor_cell->elements, new_element);
+                arrput(black_neighbor_cell->elements, new_element);
             }
 
             unlock_cell_node(black_neighbor_cell);
@@ -308,13 +308,13 @@ static void fill_discretization_matrix_elements_ddm (double sigma_x, double sigm
 
 void initialize_diagonal_elements(struct monodomain_solver *the_solver, struct grid *the_grid) {
 
-    double alpha, dx, dy, dz;
+    real_cpu alpha, dx, dy, dz;
     uint32_t num_active_cells = the_grid->num_active_cells;
     struct cell_node **ac = the_grid->active_cells;
-    double beta = the_solver->beta;
-    double cm = the_solver->cm;
+    real_cpu beta = the_solver->beta;
+    real_cpu cm = the_solver->cm;
 
-    double dt = the_solver->dt;
+    real_cpu dt = the_solver->dt;
 
     int i;
 
@@ -332,20 +332,20 @@ void initialize_diagonal_elements(struct monodomain_solver *the_solver, struct g
         element.value = alpha;
 
         if(ac[i]->elements)
-            sb_free(ac[i]->elements);
+            arrfree(ac[i]->elements);
 
         ac[i]->elements = NULL;
 
-        sb_reserve(ac[i]->elements, 7);
-        sb_push(ac[i]->elements, element);
+        arrsetcap(ac[i]->elements, 7);
+        arrput(ac[i]->elements, element);
     }
 }
 
-struct element fill_element(uint32_t position, char direction, double dx, double dy, double dz, double sigma_x1,
-                            double sigma_x2, double sigma_y1, double sigma_y2, double sigma_z1, double sigma_z2,
+struct element fill_element(uint32_t position, char direction, real_cpu dx, real_cpu dy, real_cpu dz, real_cpu sigma_x1,
+                            real_cpu sigma_x2, real_cpu sigma_y1, real_cpu sigma_y2, real_cpu sigma_z1, real_cpu sigma_z2,
                             struct element *cell_elements) {
 
-    double multiplier;
+    real_cpu multiplier;
 
     struct element new_element;
     new_element.column = position;
@@ -378,35 +378,35 @@ struct element fill_element(uint32_t position, char direction, double dx, double
     return new_element;
 }
 
-static void fill_discretization_matrix_elements(double sigma_x, double sigma_y, double sigma_z,
+static void fill_discretization_matrix_elements(real_cpu sigma_x, real_cpu sigma_y, real_cpu sigma_z,
                                                 struct cell_node *grid_cell, void *neighbour_grid_cell,
                                                 char direction) {
 
     uint32_t position;
     bool has_found;
-    double dx, dy, dz;
+    real_cpu dx, dy, dz;
 
     struct transition_node *white_neighbor_cell;
     struct cell_node *black_neighbor_cell;
 
-    double sigma_x1 = 0.0;
-    double sigma_x2 = 0.0;
+    real_cpu sigma_x1 = 0.0;
+    real_cpu sigma_x2 = 0.0;
 
     if(sigma_x != 0.0) {
         sigma_x1 = (2.0f * sigma_x * sigma_x) / (sigma_x + sigma_x);
         sigma_x2 = (2.0f * sigma_x * sigma_x) / (sigma_x + sigma_x);
     }
 
-    double sigma_y1 = 0.0;
-    double sigma_y2 = 0.0;
+    real_cpu sigma_y1 = 0.0;
+    real_cpu sigma_y2 = 0.0;
 
     if(sigma_y != 0.0) {
         sigma_y1 = (2.0f * sigma_y * sigma_y) / (sigma_y + sigma_y);
         sigma_y2 = (2.0f * sigma_y * sigma_y) / (sigma_y + sigma_y);
     }
 
-    double sigma_z1 = 0.0;
-    double sigma_z2 = 0.0;
+    real_cpu sigma_z1 = 0.0;
+    real_cpu sigma_z2 = 0.0;
 
     if(sigma_z != 0.0) {
         sigma_z1 = (2.0f * sigma_z * sigma_z) / (sigma_z + sigma_z);
@@ -477,7 +477,7 @@ static void fill_discretization_matrix_elements(double sigma_x, double sigma_y, 
             struct element *cell_elements = grid_cell->elements;
             position = black_neighbor_cell->grid_position;
 
-            size_t max_elements = sb_count(cell_elements);
+            size_t max_elements = arrlen(cell_elements);
             bool insert = true;
 
             for(size_t i = 1; i < max_elements; i++) {
@@ -493,7 +493,7 @@ static void fill_discretization_matrix_elements(double sigma_x, double sigma_y, 
                                                           sigma_y2, sigma_z1, sigma_z2, cell_elements);
 
                 new_element.cell = black_neighbor_cell;
-                sb_push(grid_cell->elements, new_element);
+                arrput(grid_cell->elements, new_element);
             }
             unlock_cell_node(grid_cell);
 
@@ -501,7 +501,7 @@ static void fill_discretization_matrix_elements(double sigma_x, double sigma_y, 
             cell_elements = black_neighbor_cell->elements;
             position = grid_cell->grid_position;
 
-            max_elements = sb_count(cell_elements);
+            max_elements = arrlen(cell_elements);
 
             insert = true;
             for(size_t i = 1; i < max_elements; i++) {
@@ -517,7 +517,7 @@ static void fill_discretization_matrix_elements(double sigma_x, double sigma_y, 
                                                           sigma_y2, sigma_z1, sigma_z2, cell_elements);
 
                 new_element.cell = grid_cell;
-                sb_push(black_neighbor_cell->elements, new_element);
+                arrput(black_neighbor_cell->elements, new_element);
             }
 
             unlock_cell_node(black_neighbor_cell);
@@ -557,12 +557,12 @@ ASSEMBLY_MATRIX(random_sigma_discretization_matrix) {
 
     srand((unsigned int)time(NULL));
 
-    float modifiers[4] = {0.0f, 0.1f, 0.5f, 1.0f};
+    real_cpu modifiers[4] = {0.0f, 0.1f, 0.5f, 1.0f};
 
 #pragma omp parallel for
     for(i = 0; i < num_active_cells; i++) {
 
-        float r = 1.0f;
+        real_cpu r;
 
         #pragma omp critical
         r = modifiers[randRange(4)];
@@ -570,6 +570,88 @@ ASSEMBLY_MATRIX(random_sigma_discretization_matrix) {
         real sigma_x_new = sigma_x * r;
         real sigma_y_new = sigma_y * r;
         real sigma_z_new = sigma_z * r;
+
+        // Computes and designates the flux due to south cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->south, 's');
+
+        // Computes and designates the flux due to north cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->north, 'n');
+
+        // Computes and designates the flux due to east cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->east, 'e');
+
+        // Computes and designates the flux due to west cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->west, 'w');
+
+        // Computes and designates the flux due to front cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->front, 'f');
+
+        // Computes and designates the flux due to back cells.
+        fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->back, 'b');
+    }
+}
+
+ASSEMBLY_MATRIX(source_sink_discretization_matrix) {
+
+    uint32_t num_active_cells = the_grid->num_active_cells;
+    struct cell_node **ac = the_grid->active_cells;
+
+    initialize_diagonal_elements(the_solver, the_grid);
+
+    int i;
+
+    real sigma_x = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real, sigma_x, config->config_data.config, "sigma_x");
+
+    real sigma_y = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real, sigma_y, config->config_data.config, "sigma_y");
+
+    real sigma_z = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real, sigma_z, config->config_data.config, "sigma_z");
+
+    real channel_width = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real, channel_width, config->config_data.config, "channel_width");
+
+    real channel_length = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real, channel_length, config->config_data.config, "channel_length");
+
+    bool inside;
+
+    real side_length_x = the_grid->side_length_x;
+    real side_length_y = the_grid->side_length_y;
+    real side_length_z = the_grid->side_length_z;
+
+    real region_height = (side_length_y - channel_width) / 2.0;
+
+    #pragma omp parallel for
+    for (i = 0; i < num_active_cells; i++)
+    {
+        real sigma_x_new;
+        real sigma_y_new;
+        real sigma_z_new;
+
+        double x = ac[i]->center_x;
+        double y = ac[i]->center_y;
+        double z = ac[i]->center_z;
+
+        // Check region 1
+        inside = (x >= 0.0) && (x <= channel_length) && (y >= 0.0) && (y <= region_height);
+        
+        // Check region 2
+        inside |= (x >= 0.0) && (x <= channel_length) && (y >= region_height + channel_width) && (y <= side_length_y);
+
+        if (inside)
+        {
+            sigma_x_new = 0.0;
+            sigma_y_new = 0.0;
+            sigma_z_new = 0.0;
+        }
+        else
+        {
+            sigma_x_new = sigma_x;
+            sigma_y_new = sigma_y;
+            sigma_z_new = sigma_z;
+        }
 
         // Computes and designates the flux due to south cells.
         fill_discretization_matrix_elements(sigma_x_new, sigma_y_new, sigma_z_new, ac[i], ac[i]->south, 's');
@@ -675,8 +757,6 @@ ASSEMBLY_MATRIX(ddm_assembly_matrix)
     kappa_z = calculate_kappa(cell_length_z,dz);
     the_solver->kappa_z = kappa_z;
 
-    the_solver->using_ddm = true;
-
     printf("[!] Using DDM formulation\n");
     printf("[X] Cell length = %.10lf || sigma_x = %.10lf || dx = %.10lf || kappa_x = %.10lf\n",\
             cell_length_x,sigma_x,dx,kappa_x);
@@ -740,15 +820,15 @@ ASSEMBLY_MATRIX(ddm_assembly_matrix)
 // Berg code
 void initialize_diagonal_elements_purkinje (struct monodomain_solver *the_solver, struct grid *the_grid) 
 {
-    double alpha; 
-    double dx, dy, dz;
+    real_cpu alpha;
+    real_cpu dx, dy, dz;
     uint32_t num_active_cells = the_grid->num_active_cells;
     struct cell_node **ac = the_grid->active_cells;
     struct node *n = the_grid->the_purkinje_network->list_nodes;
-    double beta = the_solver->beta;
-    double cm = the_solver->cm;
+    real_cpu beta = the_solver->beta;
+    real_cpu cm = the_solver->cm;
 
-    double dt = the_solver->dt;
+    real_cpu dt = the_solver->dt;
 
     int i;
 
@@ -767,27 +847,27 @@ void initialize_diagonal_elements_purkinje (struct monodomain_solver *the_solver
 
         if (ac[i]->elements != NULL) 
         {
-            sb_free (ac[i]->elements);
+            arrfree(ac[i]->elements);
         }
 
         ac[i]->elements = NULL;
-        sb_reserve (ac[i]->elements,n->num_edges);
-        sb_push (ac[i]->elements, element);
+        arrsetcap(ac[i]->elements,n->num_edges);
+        arrput(ac[i]->elements, element);
 
         n = n->next;
     }       
 }
 
 // For the Purkinje fibers we only need to solve the 1D Monodomain equation
-static void fill_discretization_matrix_elements_purkinje (double sigma_x, struct cell_node **grid_cells, uint32_t num_active_cells,
+static void fill_discretization_matrix_elements_purkinje (real_cpu sigma_x, struct cell_node **grid_cells, uint32_t num_active_cells,
                                                         struct node *pk_node) 
 {
     
     struct edge *e;
     struct element **cell_elements;
-    double dx, dy, dz;
+    real_cpu dx;
 
-    double sigma_x1 = (2.0f * sigma_x * sigma_x) / (sigma_x + sigma_x);
+    real_cpu sigma_x1 = (2.0f * sigma_x * sigma_x) / (sigma_x + sigma_x);
 
     int i;
 
@@ -811,7 +891,7 @@ static void fill_discretization_matrix_elements_purkinje (double sigma_x, struct
             // Diagonal element ...
             cell_elements[0]->value += (sigma_x1 * dx);
 
-            sb_push(grid_cells[i]->elements,new_element);   
+            arrput(grid_cells[i]->elements,new_element);
 
             e = e->next;         
         }
@@ -839,7 +919,7 @@ ASSEMBLY_MATRIX(purkinje_fibers_assembly_matrix)
     for (int i = 0; i < num_active_cells; i++)
     {
         printf("\nCell %d -- Diagonal = %lf\n",i,ac[i]->elements[0].value);
-        int count = sb_count(ac[i]->elements);
+        int count = arrlen(ac[i]->elements);
         printf("\tElements:\n");
         for (int j = 1; j < count; j++)
             printf("\t%d -- Column = %d -- Value = %lf\n",ac[i]->elements[j].column,ac[i]->elements[j].column,ac[i]->elements[j].value);

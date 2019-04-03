@@ -2,16 +2,22 @@
 // Created by sachetto on 13/10/17.
 //
 
-#include <cuda_runtime.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "../alg/grid/grid.h"
 #include "../config/restore_state_config.h"
-#include "../hash/point_voidp_hash.h"
+
+#include "../common_types/common_types.h"
+#include "../single_file_libraries/stb_ds.h"
+
 #include "../libraries_common/config_helpers.h"
+
+#ifdef COMPILE_CUDA
 #include "../models_library/model_gpu_utils.h"
+#endif
+
 #include "../string/sds.h"
 
 RESTORE_STATE (restore_simulation_state) {
@@ -33,8 +39,9 @@ RESTORE_STATE (restore_simulation_state) {
 
         int number_of_cells = 0;
         int num_active_cells = 0;
-        float side_length_x, side_length_y, side_length_z;
-        struct point_voidp_hash *mesh_hash = point_voidp_hash_create ();
+        real_cpu side_length_x, side_length_y, side_length_z;
+        struct point_voidp_hash_entry *mesh_hash = NULL;
+        hmdefault(mesh_hash, NULL);
 
         fread (&side_length_x, sizeof (the_grid->side_length_x), 1, input_file);
         fread (&side_length_y, sizeof (the_grid->side_length_y), 1, input_file);
@@ -52,14 +59,14 @@ RESTORE_STATE (restore_simulation_state) {
         // Read the mesh to a point hash
         for (int i = 0; i < number_of_cells; i++) {
 
-            double *mesh_data = (double *)calloc (num_data, sizeof (double));
+            real_cpu *mesh_data = (real_cpu *)calloc (num_data, sizeof (real_cpu));
 
             // Read center_x, center_y, center_z
             fread (&mp, sizeof (mp), 1, input_file);
 
             // Read v, north_flux, south_flux, east_flux, west_flux, front_flux,
             // back_flux, b
-            fread (&mesh_data[0], sizeof (double), 8, input_file);
+            fread (&mesh_data[0], sizeof (real_cpu), 8, input_file);
 
             // read can_change
             fread (&mesh_data[8], sizeof (grid_cell->can_change), 1, input_file);
@@ -67,12 +74,12 @@ RESTORE_STATE (restore_simulation_state) {
             // read active
             fread (&mesh_data[9], sizeof (grid_cell->active), 1, input_file);
 
-            point_voidp_hash_insert (mesh_hash, mp, mesh_data);
+            hmput(mesh_hash, mp, mesh_data);
         }
 
         printf ("Restoring grid state...\n");
 
-        double *cell_data;
+        real_cpu *cell_data;
 
         while (grid_cell) {
 
@@ -86,7 +93,7 @@ RESTORE_STATE (restore_simulation_state) {
                 mesh_point.y = grid_cell->center_y;
                 mesh_point.z = grid_cell->center_z;
 
-                if ((cell_data = point_voidp_hash_search (mesh_hash, mesh_point)) != (void *)-1) {
+                if ((cell_data = hmget (mesh_hash, mesh_point)) != NULL) {
 
                     // This grid_cell is already in the mesh. We only need to restore the data associated to it...
                     // If the cell is not active we don't need to recover its state
@@ -121,7 +128,7 @@ RESTORE_STATE (restore_simulation_state) {
         assert (number_of_cells == the_grid->number_of_cells);
 
         fclose (input_file);
-        point_voidp_hash_destroy (mesh_hash);
+        hmfree(mesh_hash);
     }
 
     if (the_monodomain_solver) {
@@ -185,7 +192,7 @@ RESTORE_STATE (restore_simulation_state) {
 
         fread (&(the_ode_solver->original_num_cells), sizeof (the_ode_solver->original_num_cells), 1, input_file);
         if (the_ode_solver->gpu) {
-
+#ifdef COMPILE_CUDA
             real *sv_cpu;
             sv_cpu = (real *)malloc (the_ode_solver->original_num_cells * the_ode_solver->model_data.number_of_ode_equations *
                                      sizeof (real));
@@ -195,7 +202,7 @@ RESTORE_STATE (restore_simulation_state) {
             check_cuda_error(cudaMemcpy2D (the_ode_solver->sv, the_ode_solver->pitch, sv_cpu, the_ode_solver->original_num_cells * sizeof (real),
                           the_ode_solver->original_num_cells * sizeof (real),
                           (size_t)the_ode_solver->model_data.number_of_ode_equations, cudaMemcpyHostToDevice));
-
+#endif
         } else {
             fread (the_ode_solver->sv, sizeof (real),
                    the_ode_solver->original_num_cells * the_ode_solver->model_data.number_of_ode_equations, input_file);

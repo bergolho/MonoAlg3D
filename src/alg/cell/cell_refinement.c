@@ -4,8 +4,11 @@
 
 #include "cell.h"
 #include "string.h"
+#include "../../single_file_libraries/stb_ds.h"
 
-void refine_cell( struct cell_node *cell, uint32_t *free_sv_positions, uint32_t **refined_this_step)  {
+#include <assert.h>
+
+void refine_cell( struct cell_node *cell, ui32_array free_sv_positions, ui32_array *refined_this_step)  {
 
     assert(cell);
 
@@ -25,9 +28,9 @@ void refine_cell( struct cell_node *cell, uint32_t *free_sv_positions, uint32_t 
             *back_southwest_sub_cell,
             *back_southeast_sub_cell;
 
-    int number_of_hilbert_shape;
+    uint8_t number_of_hilbert_shape;
 
-    float cell_center_x    = cell->center_x,
+    real_cpu cell_center_x    = cell->center_x,
             cell_center_y   = cell->center_y,
             cell_center_z   = cell->center_z,
             cell_half_side_x    = cell->dx / 2.0f,
@@ -42,7 +45,7 @@ void refine_cell( struct cell_node *cell, uint32_t *free_sv_positions, uint32_t 
     // Creation of the front northeast cell. This cell, which is to be refined,
     // becomes the frontNortheast cell of the new bunch.
     front_northeast_sub_cell                     = cell;
-    front_northeast_sub_cell->cell_data.level    = cell->cell_data.level + (uint16_t )1;
+    front_northeast_sub_cell->cell_data.level    = cell->cell_data.level + (uint8_t )1;
     front_northeast_sub_cell->dx        = cell_half_side_x;
     front_northeast_sub_cell->dy        = cell_half_side_y;
     front_northeast_sub_cell->dz        = cell_half_side_z;
@@ -52,7 +55,7 @@ void refine_cell( struct cell_node *cell, uint32_t *free_sv_positions, uint32_t 
     front_northeast_sub_cell->bunch_number       = old_bunch_number * 10 + 1;
 
     if(refined_this_step && *refined_this_step) {
-        sb_push(*refined_this_step, front_northeast_sub_cell->sv_position);
+        arrput(*refined_this_step, front_northeast_sub_cell->sv_position);
     }
 
     // Creation of back Northeast node.
@@ -1083,10 +1086,7 @@ void refine_cell( struct cell_node *cell, uint32_t *free_sv_positions, uint32_t 
  */
 void simplify_refinement( struct transition_node *transition_node ) {
 
-    if( transition_node == NULL ) {
-        fprintf(stderr, "simplify_refinement: Parameter transition_node is NULL. Exiting!");
-        exit(10);
-    }
+    assert(transition_node);
 
     // Pointers used to convert the Cell in a cell node or transition node.
     struct transition_node *neighbour_transition_node;
@@ -1101,7 +1101,7 @@ void simplify_refinement( struct transition_node *transition_node ) {
 
         uint16_t single_connector_level = ((struct basic_cell_data*)(transition_node->single_connector))->level;
 
-        if( ( node_type == 'w') && (node_level == single_connector_level) ) {
+        if( ( node_type == TRANSITION_NODE_TYPE) && (node_level == single_connector_level) ) {
             struct transition_node *neighbour_node = (struct transition_node*) (transition_node->single_connector);
 
             struct cell_node *cellNode[4];
@@ -1132,7 +1132,7 @@ void simplify_refinement( struct transition_node *transition_node ) {
 
                 type = neighborCell[i]->cell_data.type;
                 switch( type ) {
-                    case 'b': {
+                    case CELL_NODE_TYPE: {
                         neighbour_cell_node = neighborCell[i];
                         switch( direction )	{
                             case 'n': { neighbour_cell_node->south = cellNode[i]; break; }
@@ -1146,7 +1146,7 @@ void simplify_refinement( struct transition_node *transition_node ) {
                         break;
                     }
 
-                    case 'w': {
+                    case TRANSITION_NODE_TYPE: {
                         neighbour_transition_node = (struct transition_node*)(neighborCell[i]);
                         if( neighbour_node == neighbour_transition_node->single_connector )
                             neighbour_transition_node->single_connector = cellNode[i];
@@ -1176,10 +1176,10 @@ void simplify_refinement( struct transition_node *transition_node ) {
 }
 
 void set_refined_cell_data(struct cell_node* the_cell, struct cell_node* other_cell,
-                           float dx, float dy, float dz,
-                           float center_x, float center_y, float center_z,
-                           uint64_t  bunch_number, uint32_t *free_sv_positions,
-                           uint32_t **refined_this_step) {
+                           real_cpu dx, real_cpu dy, real_cpu dz,
+                           real_cpu center_x, real_cpu center_y, real_cpu center_z,
+                           uint64_t  bunch_number, ui32_array free_sv_positions,
+                           ui32_array *refined_this_step) {
 
 
     the_cell->cell_data.level = other_cell->cell_data.level;
@@ -1209,11 +1209,13 @@ void set_refined_cell_data(struct cell_node* the_cell, struct cell_node* other_c
     the_cell->center_z = center_z;
     the_cell->bunch_number = bunch_number;
 
-    if(free_sv_positions)
-        the_cell->sv_position = sb_pop(free_sv_positions);
+    if(free_sv_positions) {
+        the_cell->sv_position = arrpop(free_sv_positions);
+    }
 
-    if(refined_this_step && *refined_this_step)
-        sb_push(*refined_this_step, the_cell->sv_position);
+    if(refined_this_step && *refined_this_step) {
+        arrput(*refined_this_step, the_cell->sv_position);
+    }
 
 }
 

@@ -6,22 +6,24 @@
 #include "../libraries_common/config_helpers.h"
 #include "../libraries_common/common_data_structures.h"
 
+#include "../single_file_libraries/stb_ds.h"
+
 bool initialized = false;
 bool use_jacobi;
 int max_its = 50;
-double tol = 1e-16;
+real_cpu tol = 1e-16;
 
 SOLVE_LINEAR_SYSTEM(conjugate_gradient) {
 
     if(!initialized) {
-        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(double, tol, config->config_data.config, "tolerance");
+        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(real_cpu, tol, config->config_data.config, "tolerance");
         GET_PARAMETER_BINARY_VALUE_OR_USE_DEFAULT(use_jacobi, config->config_data.config, "use_preconditioner");
         GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(int, max_its, config->config_data.config, "max_iterations");
         initialized = true;
     }
 
 
-    double  rTr,
+    real_cpu  rTr,
             r1Tr1,
             pTAp,
             alpha,
@@ -57,7 +59,7 @@ SOLVE_LINEAR_SYSTEM(conjugate_gradient) {
         struct element *cell_elements = ac[i]->elements;
         ac[i]->Ax = 0.0;
 
-        size_t max_el = sb_count(cell_elements);
+        size_t max_el = arrlen(cell_elements);
 
         for(int el = 0; el < max_el; el++) {
             element = cell_elements[el];
@@ -66,7 +68,7 @@ SOLVE_LINEAR_SYSTEM(conjugate_gradient) {
 
         CG_R(ac[i]) = ac[i]->b - ac[i]->Ax;
         if(use_jacobi) {
-            double value = cell_elements[0].value;
+            real_cpu value = cell_elements[0].value;
             if(value == 0.0) value = 1.0;
             CG_Z(ac[i]) = (1.0/value) * CG_R(ac[i]); // preconditioner
             rTz += CG_R(ac[i]) * CG_Z(ac[i]);
@@ -94,7 +96,7 @@ SOLVE_LINEAR_SYSTEM(conjugate_gradient) {
                 ac[i]->Ax = 0.0;
                 struct element *cell_elements = ac[i]->elements;
 
-                size_t max_el = sb_count(cell_elements);
+                size_t max_el = arrlen(cell_elements);
                 for(int el = 0; el < max_el; el++) {
                     element = cell_elements[el];
                     ac[i]->Ax += element.value * CG_P(element.cell);
@@ -125,7 +127,7 @@ SOLVE_LINEAR_SYSTEM(conjugate_gradient) {
                 CG_R(ac[i]) -= alpha * ac[i]->Ax;
 
                 if(use_jacobi) {
-                    double value = ac[i]->elements[0].value;
+                    real_cpu value = ac[i]->elements[0].value;
                     if(value == 0.0) value = 1.0;
                     CG_Z(ac[i]) = (1.0/value) * CG_R(ac[i]);
                     r1Tz1 += CG_Z(ac[i]) * CG_R(ac[i]);
@@ -174,14 +176,14 @@ SOLVE_LINEAR_SYSTEM(jacobi) {
 
 
     if(!initialized) {
-        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(double, tol, config->config_data.config, "tolerance");
+        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(real_cpu, tol, config->config_data.config, "tolerance");
         max_its = 500;
         GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(int, max_its, config->config_data.config, "max_iterations");
         initialized = true;
     }
 
 
-    double  sigma,
+    real_cpu  sigma,
             precision = tol;
 
     uint32_t num_active_cells = the_grid->num_active_cells;
@@ -209,7 +211,7 @@ SOLVE_LINEAR_SYSTEM(jacobi) {
                 struct element *cell_elements = ac[i]->elements;
                 sigma = 0.0;
 
-                size_t max_el = sb_count(cell_elements);
+                size_t max_el = arrlen(cell_elements);
 
                 // Do not take the diagonal element
                 for(int el = 1; el < max_el; el++)
@@ -218,17 +220,17 @@ SOLVE_LINEAR_SYSTEM(jacobi) {
                     sigma += element.value * element.cell->v;
                 }
 
-                double value = cell_elements[0].value;
+                real_cpu value = cell_elements[0].value;
                 JACOBI_X_AUX(ac[i]) = (1.0/value)*(ac[i]->b - sigma);
             }
-            double residue = 0.0;
-            double sum;
+            real_cpu residue = 0.0;
+            real_cpu sum;
             #pragma omp parallel for private (element,sum) reduction (+:residue)
             for (i = 0; i < num_active_cells; i++)
             {
                 struct element *cell_elements = ac[i]->elements;
 
-                size_t max_el = sb_count(cell_elements);
+                size_t max_el = arrlen(cell_elements);
 
                 // Do not take the diagonal element
                 sum = 0.0;
@@ -258,9 +260,10 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
 
 
     if(!initialized) {
-        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(double, tol, config->config_data.config, "tolerance");
-        char *preconditioner_char;
-        GET_PARAMETER_VALUE_CHAR (preconditioner_char, config->config_data.config, "use_preconditioner");
+        GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(real_cpu, tol, config->config_data.config, "tolerance");
+
+        char *preconditioner_char = NULL;
+        GET_PARAMETER_VALUE_CHAR_OR_USE_DEFAULT(preconditioner_char, config->config_data.config, "use_preconditioner");
         if (preconditioner_char != NULL)
         {
             use_jacobi = ((strcmp (preconditioner_char, "yes") == 0) || (strcmp (preconditioner_char, "true") == 0));
@@ -272,7 +275,7 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
     }
 
 
-    double  rTr,
+    real_cpu  rTr,
             r1Tr1,
             pTAp,
             alpha,
@@ -316,7 +319,7 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
         struct element *cell_elements = ac[i]->elements;
         ac[i]->Ax = 0.0;
 
-        size_t max_el = sb_count(cell_elements);
+        size_t max_el = arrlen(cell_elements);
 
         for(int el = 0; el < max_el; el++)
         {
@@ -346,7 +349,7 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
 
         if(use_jacobi)
         {
-            double value = cell_elements[0].value;
+            real_cpu value = cell_elements[0].value;
             if(value == 0.0) value = 1.0;
             BCG_Z(ac[i]) = (1.0/value) * BCG_R(ac[i]); // preconditioner
             BCG_Z_AUX(ac[i]) = (1.0/value) * BCG_R_AUX(ac[i]);
@@ -384,7 +387,7 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
                 ac[i]->Ax = 0.0;
                 struct element *cell_elements = ac[i]->elements;
 
-                size_t max_el = sb_count(cell_elements);
+                size_t max_el = arrlen(cell_elements);
                 for(int el = 0; el < max_el; el++)
                 {
                     element = cell_elements[el];
@@ -426,7 +429,7 @@ SOLVE_LINEAR_SYSTEM(biconjugate_gradient)
 
                 if(use_jacobi)
                 {
-                    double value = ac[i]->elements[0].value;
+                    real_cpu value = ac[i]->elements[0].value;
                     if(value == 0.0) value = 1.0;
                     BCG_Z(ac[i]) = (1.0/value) * BCG_R(ac[i]);
                     BCG_Z_AUX(ac[i]) = (1.0/value) * BCG_R_AUX(ac[i]);

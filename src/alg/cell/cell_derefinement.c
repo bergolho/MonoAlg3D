@@ -2,7 +2,10 @@
 // Created by sachetto on 30/09/17.
 //
 
+#include <assert.h>
+
 #include "cell.h"
+#include "../../single_file_libraries/stb_ds.h"
 
 /**
 * Decides if the bunch should be derefined. A bunch will not be derefined if
@@ -14,7 +17,7 @@
 * @throw NullPointer If a null cell node is given as argument, a NullPointer
 * exception is thrown.
 */
-bool cell_needs_derefinement (struct cell_node *grid_cell, double derefinement_bound) {
+bool cell_needs_derefinement (struct cell_node *grid_cell, real_cpu derefinement_bound) {
 
     if (grid_cell == NULL) {
         fprintf (stderr, "cell_needs_derefinement: Parameter grid_cell is NULL.");
@@ -29,16 +32,16 @@ bool cell_needs_derefinement (struct cell_node *grid_cell, double derefinement_b
     struct cell_node *seventh_cell = sixth_cell->next;
     struct cell_node *eighth_cell = seventh_cell->next;
 
-    double maximum1 = get_cell_maximum_flux (first_cell);
-    double maximum2 = get_cell_maximum_flux (second_cell);
-    double maximum3 = get_cell_maximum_flux (third_cell);
-    double maximum4 = get_cell_maximum_flux (fourth_cell);
-    double maximum5 = get_cell_maximum_flux (fifth_cell);
-    double maximum6 = get_cell_maximum_flux (sixth_cell);
-    double maximum7 = get_cell_maximum_flux (seventh_cell);
-    double maximum8 = get_cell_maximum_flux (eighth_cell);
+    real_cpu maximum1 = get_cell_maximum_flux (first_cell);
+    real_cpu maximum2 = get_cell_maximum_flux (second_cell);
+    real_cpu maximum3 = get_cell_maximum_flux (third_cell);
+    real_cpu maximum4 = get_cell_maximum_flux (fourth_cell);
+    real_cpu maximum5 = get_cell_maximum_flux (fifth_cell);
+    real_cpu maximum6 = get_cell_maximum_flux (sixth_cell);
+    real_cpu maximum7 = get_cell_maximum_flux (seventh_cell);
+    real_cpu maximum8 = get_cell_maximum_flux (eighth_cell);
 
-    double highest_maximum = maximum1;
+    real_cpu highest_maximum = maximum1;
     if (maximum2 > highest_maximum)
         highest_maximum = maximum2;
 
@@ -68,22 +71,20 @@ bool cell_needs_derefinement (struct cell_node *grid_cell, double derefinement_b
     return derefinement_condition;
 }
 
-void derefine_cell_bunch (struct cell_node *first_bunch_cell, uint32_t **free_sv_positions) {
-    if (first_bunch_cell == 0) {
-        fprintf (stderr, "derefine_cell_bunch: Parameter first_bunch_cell is NULL. Exiting!!");
-        exit (10);
-    }
+void derefine_cell_bunch (struct cell_node *first_bunch_cell, ui32_array *free_sv_positions) {
+
+    assert(first_bunch_cell);
 
     struct cell_node *cell_before_bunch = first_bunch_cell->previous;
     struct cell_node *cell_after_bunch =
         first_bunch_cell->next->next->next->next->next->next->next->next;
 
-    uint16_t bunch_level = first_bunch_cell->cell_data.level;
+    uint8_t bunch_level = first_bunch_cell->cell_data.level;
     uint8_t hilbert_shape_number = get_father_bunch_number (first_bunch_cell);
     uint64_t bunch_number = first_bunch_cell->bunch_number;
 
     // New cell variable (Arithmetic mean between all cells of the bunch).
-    double u = 0;
+    real_cpu u = 0;
 
     struct cell_node *auxiliar = first_bunch_cell;
     for (int i = 0; i < 8; i++) {
@@ -108,14 +109,14 @@ void derefine_cell_bunch (struct cell_node *first_bunch_cell, uint32_t **free_sv
 
         struct cell_node *wsb = ws->back;
 
-        sb_push(*free_sv_positions, w->sv_position);
-        sb_push(*free_sv_positions, b->sv_position);
-        sb_push(*free_sv_positions, s->sv_position);
+        arrput(*free_sv_positions, w->sv_position);
+        arrput(*free_sv_positions, b->sv_position);
+        arrput(*free_sv_positions, s->sv_position);
 
-        sb_push(*free_sv_positions, wb->sv_position);
-        sb_push(*free_sv_positions, ws->sv_position);
-        sb_push(*free_sv_positions, sb->sv_position);
-        sb_push(*free_sv_positions, wsb->sv_position);
+        arrput(*free_sv_positions, wb->sv_position);
+        arrput(*free_sv_positions, ws->sv_position);
+        arrput(*free_sv_positions, sb->sv_position);
+        arrput(*free_sv_positions, wsb->sv_position);
         /////////////////////////////////////////////////////////////
 
     }
@@ -127,9 +128,9 @@ void derefine_cell_bunch (struct cell_node *first_bunch_cell, uint32_t **free_sv
     if (new_cell->next != 0)
         new_cell->next->previous = new_cell;
 
-    float aux_center_x = ((struct cell_node *)(new_cell->back))->center_x;
-    float aux_center_y = ((struct cell_node *)(new_cell->west))->center_y;
-    float aux_center_z = ((struct cell_node *)(new_cell->south))->center_z;
+    real_cpu aux_center_x = ((struct cell_node *)(new_cell->back))->center_x;
+    real_cpu aux_center_y = ((struct cell_node *)(new_cell->west))->center_y;
+    real_cpu aux_center_z = ((struct cell_node *)(new_cell->south))->center_z;
 
     // New geometric variables.
     new_cell->center_x = (new_cell->center_x + aux_center_x) / 2.0f;
@@ -242,17 +243,17 @@ struct cell_node *get_front_northeast_cell (struct cell_node *first_bunch_cell) 
     struct cell_node *seventh_cell = sixth_cell->next;
     struct cell_node *eighth_cell = seventh_cell->next;
 
-    double coordinateSum1 = first_cell->center_x + first_cell->center_y + first_cell->center_z;
-    double coordinateSum2 = second_cell->center_x + second_cell->center_y + second_cell->center_z;
-    double coordinateSum3 = third_cell->center_x + third_cell->center_y + third_cell->center_z;
-    double coordinateSum4 = fourth_cell->center_x + fourth_cell->center_y + fourth_cell->center_z;
-    double coordinateSum5 = fifth_cell->center_x + fifth_cell->center_y + fifth_cell->center_z;
-    double coordinateSum6 = sixth_cell->center_x + sixth_cell->center_y + sixth_cell->center_z;
-    double coordinateSum7 =
+    real_cpu coordinateSum1 = first_cell->center_x + first_cell->center_y + first_cell->center_z;
+    real_cpu coordinateSum2 = second_cell->center_x + second_cell->center_y + second_cell->center_z;
+    real_cpu coordinateSum3 = third_cell->center_x + third_cell->center_y + third_cell->center_z;
+    real_cpu coordinateSum4 = fourth_cell->center_x + fourth_cell->center_y + fourth_cell->center_z;
+    real_cpu coordinateSum5 = fifth_cell->center_x + fifth_cell->center_y + fifth_cell->center_z;
+    real_cpu coordinateSum6 = sixth_cell->center_x + sixth_cell->center_y + sixth_cell->center_z;
+    real_cpu coordinateSum7 =
         seventh_cell->center_x + seventh_cell->center_y + seventh_cell->center_z;
-    double coordinateSum8 = eighth_cell->center_x + eighth_cell->center_y + eighth_cell->center_z;
+    real_cpu coordinateSum8 = eighth_cell->center_x + eighth_cell->center_y + eighth_cell->center_z;
 
-    double maximum;
+    real_cpu maximum;
     struct cell_node *front_northeast_cell = first_cell;
     maximum = coordinateSum1;
     if (coordinateSum2 > maximum) {
@@ -386,14 +387,10 @@ uint8_t get_father_bunch_number (struct cell_node *first_bunch_cell) {
  * then simply connects the outside to it.
  *
  * @param transition_node Candidate transition node to be eliminated.
- * @throw NullPointer If a null transition node is given as argument, a NullPointer
- * exception is thrown.
  */
 void simplify_derefinement(struct transition_node *transition_node) {
-    if (transition_node == NULL) {
-        fprintf (stderr, "simplify_derefinement(): Parameter transition_node is NULL. Exiting!");
-        exit (10);
-    }
+
+    assert(transition_node);
 
     struct cell_node *derefinedCell = (struct cell_node *)(transition_node->single_connector);
     char direction = transition_node->direction;
@@ -448,7 +445,7 @@ void simplify_derefinement(struct transition_node *transition_node) {
         default: { break; }
         }
 
-        if (neighborCellType == 'b') {
+        if (neighborCellType == CELL_NODE_TYPE) {
             blackNeighborCell = (struct cell_node *)(neighbor_transition_node->single_connector);
             switch (direction) {
             case 'n': {
