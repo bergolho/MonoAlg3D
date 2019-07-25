@@ -82,6 +82,41 @@ SET_SPATIAL_STIM(stim_if_x_less_than) {
     }
 }
 
+SET_SPATIAL_STIM(stim_if_y_less_than) {
+
+    uint32_t n_active = the_grid->num_active_cells;
+    struct cell_node **ac = the_grid->active_cells;
+
+    bool stim;
+    real stim_current = config->stim_current;
+    real stim_value;
+
+    real_cpu y_limit = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, y_limit, config->config_data.config, "y_limit");
+
+    if(config->spatial_stim_currents) {
+        free(config->spatial_stim_currents);
+    }
+
+    config->spatial_stim_currents = (real *)malloc(n_active*sizeof(real));
+
+	int i;
+
+    #pragma omp parallel for private(stim, stim_value)
+    for (i = 0; i < n_active; i++) {
+        stim = ac[i]->center_y < y_limit;
+
+        if (stim) {
+            stim_value = stim_current;
+        } else {
+            stim_value = 0.0;
+        }
+
+        config->spatial_stim_currents[i] = stim_value;
+
+    }
+}
+
 SET_SPATIAL_STIM(set_stim_from_file) {
 
     char *stim_file = NULL;
@@ -481,4 +516,71 @@ SET_SPATIAL_STIM(stim_if_id_greater_than) {
 
     }
 }
-// ***********************************************************************************************************
+
+SET_SPATIAL_STIM(stim_concave) 
+{
+
+    uint32_t n_active = the_grid->num_active_cells;
+    struct cell_node **ac = the_grid->active_cells;
+
+    real_cpu max_x_1 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, max_x_1, config->config_data.config, "max_x_1");
+
+    real_cpu min_x_1 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, min_x_1, config->config_data.config, "min_x_1");
+
+    real_cpu max_y_1 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, max_y_1, config->config_data.config, "max_y_1");
+
+    real_cpu min_y_1 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, min_y_1, config->config_data.config, "min_y_1");
+
+    real_cpu max_x_2 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, max_x_2, config->config_data.config, "max_x_2");
+
+    real_cpu min_x_2 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, min_x_2, config->config_data.config, "min_x_2");
+
+    real_cpu max_y_2 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, max_y_2, config->config_data.config, "max_y_2");
+
+    real_cpu min_y_2 = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, min_y_2, config->config_data.config, "min_y_2");
+
+    real stim_current = config->stim_current;
+    real stim_value;
+
+    if(config->spatial_stim_currents) 
+    {
+        free(config->spatial_stim_currents);
+    }
+
+    config->spatial_stim_currents = (real *)malloc(n_active*sizeof(real));
+
+    int i;
+
+#pragma omp parallel for private(stim_value)
+    for (i = 0; i < n_active; i++) 
+    {
+
+        bool stim_1, stim_2;
+        // First corner
+        stim_1  = (ac[i]->center_x >= min_x_1) && (ac[i]->center_x <= max_x_1);
+        stim_1 &= (ac[i]->center_y >= min_y_1) && (ac[i]->center_y <= max_y_1);
+        // Second corner
+        stim_2 = (ac[i]->center_x >= min_x_2) && (ac[i]->center_x <= max_x_2);
+        stim_2 &= (ac[i]->center_y >= min_y_2) && (ac[i]->center_y <= max_y_2);
+
+        if (stim_1 || stim_2) 
+        {
+            stim_value = stim_current;
+        } 
+        else 
+        {
+            stim_value = 0.0;
+        }
+
+        config->spatial_stim_currents[i] = stim_value;
+
+    }
+}

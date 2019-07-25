@@ -13,12 +13,7 @@
 #include <assert.h>
 #include <time.h>
 
-#ifdef _MSC_VER
-#include <process.h>
-#define getpid _getpid
-#else
 #include <unistd.h>
-#endif
 
 SET_SPATIAL_DOMAIN(initialize_grid_with_cuboid_mesh) {
 
@@ -53,11 +48,11 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_cuboid_mesh) {
         "Loading cuboid mesh with %lf µm x %lf µm x %lf µm using dx %lf µm, dy %lf µm, dz %lf µm\n", side_length_x,
         side_length_y, side_length_z, start_dx, start_dy, start_dz);
 
-    int num_steps = get_num_refinement_steps_to_discretization(real_side_length_x, start_dx);
+    int num_steps = get_num_refinement_steps_to_discretization(real_side_length_z, start_dz);
 
     initialize_and_construct_grid(the_grid, real_side_length_x, real_side_length_y, real_side_length_z);
 
-    //TODO: maybe to this in all directions????
+
     if((real_side_length_z / 2.0f) > side_length_z) {
         real_cpu aux = real_side_length_z / 2.0f;
         int remaining_refinements = num_steps;
@@ -84,8 +79,6 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_cuboid_mesh) {
         derefine_grid_inactive_cells(the_grid);
     }
 
-    translate_visible_mesh_to_origin(the_grid);
-
     return 1;
 }
 
@@ -107,7 +100,6 @@ SET_SPATIAL_DOMAIN (initialize_grid_with_square_mesh) {
     shput(config->config_data.config, "side_length_z", strdup(sz_char));
 
     return initialize_grid_with_cuboid_mesh(config, the_grid);
-
 
 }
 
@@ -147,7 +139,6 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_cable_mesh) {
         derefine_grid_inactive_cells(the_grid);
     }
 
-    translate_visible_mesh_to_origin(the_grid);
 
     return 1;
 }
@@ -168,8 +159,17 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_human_mesh_with_two_scars) {
     initialize_and_construct_grid(the_grid, 204800, 204800, 204800);
     refine_grid(the_grid, 7);
 
+    char *read_format;
+
+    if(fibrotic) {
+        read_format = strdup("%lf,%lf,%lf,%lf,%d,%c\n");
+    }
+    else {
+        read_format = strdup("%lf,%lf,%lf,%lf\n");
+    }
+
     print_to_stdout_and_file("Loading Human Heart Mesh\n");
-    set_custom_mesh(the_grid, mesh_file, 2025252, fibrotic);
+    set_custom_mesh(the_grid, mesh_file, 2025252, read_format);
 
     print_to_stdout_and_file("Cleaning grid\n");
     int i;
@@ -279,11 +279,11 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_scar_wedge) {
 
     if(strcmp(scar_size, "big") == 0) {
         print_to_stdout_and_file("Loading Human Heart Edge with big scar\n");
-        set_custom_mesh_with_bounds(the_grid, mesh_file, 2025252, 79100, 121000, 66700, 106000, 11200, 61400, true);
+        set_custom_mesh_with_bounds(the_grid, mesh_file, 2025252, 79100, 121000, 66700, 106000, 11200, 61400, "%lf,%lf,%lf,%lf,%d,%c\n");
         size_code = 0;
     } else if(strcmp(scar_size, "small") == 0) {
         print_to_stdout_and_file("Loading Human Heart Edge with small scar\n");
-        set_custom_mesh_with_bounds(the_grid, mesh_file, 2025252, 30400, 81600, 59200, 103000, 13600, 48000, true);
+        set_custom_mesh_with_bounds(the_grid, mesh_file, 2025252, 30400, 81600, 59200, 103000, 13600, 48000, "%lf,%lf,%lf,%lf,%d,%c\n");
         size_code = 1;
     } else {
         print_to_stderr_and_file_and_exit("Function: initialize_grid_with_scar_edge, invalid scar size %s. Valid sizes are big or small. Exiting!\n",
@@ -405,7 +405,7 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_rabbit_mesh) {
 
     print_to_stdout_and_file("Loading Rabbit Heart Mesh\n");
 
-    set_custom_mesh(the_grid, mesh_file, 470197, false);
+    set_custom_mesh(the_grid, mesh_file, 470197, "%lf,%lf,%lf,%lf\n");
 
     print_to_stdout_and_file("Cleaning grid\n");
     int i;
@@ -436,9 +436,7 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_rabbit_mesh) {
 SET_SPATIAL_DOMAIN(initialize_grid_with_mouse_mesh) {
 
     char *mesh_file = NULL;
-
     GET_PARAMETER_VALUE_CHAR_OR_REPORT_ERROR(mesh_file, config->config_data.config, "mesh_file");
-
 
     real_cpu start_h = 0.0;
     GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, start_h, config->config_data.config, "start_discretization");
@@ -454,7 +452,7 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_mouse_mesh) {
 
     print_to_stdout_and_file("Loading Mouse Heart Mesh\n");
 
-    set_custom_mesh(the_grid, mesh_file, 96195, false);
+    set_custom_mesh(the_grid, mesh_file, 96195, "%lf,%lf,%lf,%lf\n");
 
     int i;
     for(i = 0; i < 5; i++) {
@@ -559,8 +557,6 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_benchmark_mesh) {
         }
     }
 
-    translate_visible_mesh_to_origin(the_grid);
-
     return 1;
 }
 
@@ -573,7 +569,38 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_plain_fibrotic_mesh) {
     GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, seed, config->config_data.config, "seed");
 
     initialize_grid_with_square_mesh(config, the_grid);
-    set_plain_fibrosis(the_grid, phi, seed);
+    //set_plain_fibrosis(the_grid, phi, seed);
+    set_plain_fibrosis_and_write_positions_to_file(the_grid, phi, seed);
+
+    return 1;
+}
+
+SET_SPATIAL_DOMAIN(initialize_grid_with_plain_fibrotic_mesh_from_file) {
+
+    char *fib_file = NULL;
+    GET_PARAMETER_VALUE_CHAR_OR_REPORT_ERROR(fib_file, config->config_data.config, "fibrosis_file");
+
+    int fib_size = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(int, fib_size, config->config_data.config, "size");
+
+    initialize_grid_with_square_mesh(config, the_grid);
+    set_fibrosis_from_file(the_grid, fib_file, fib_size);
+
+    return 1;
+}
+
+SET_SPATIAL_DOMAIN(initialize_grid_with_plain_source_sink_fibrotic_mesh) 
+{
+
+    real_cpu channel_width = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, channel_width, config->config_data.config, "channel_width");
+
+    real_cpu channel_length = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, channel_length, config->config_data.config, "channel_length");
+
+
+    initialize_grid_with_square_mesh(config, the_grid);
+    set_plain_source_sink_fibrosis(the_grid, channel_width, channel_length);
 
     return 1;
 }
@@ -606,6 +633,120 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_plain_and_sphere_fibrotic_mesh) {
 
     initialize_grid_with_square_mesh(config, the_grid);
     set_plain_sphere_fibrosis(the_grid, phi, plain_center, sphere_radius, border_zone_size, border_zone_radius, seed);
+
+    return 1;
+}
+
+SET_SPATIAL_DOMAIN(set_perlin_square_mesh) {
+
+    assert(the_grid);
+
+    print_to_stdout_and_file("Loading perlin mesh\n");
+
+    char *mesh_file = NULL;
+
+    GET_PARAMETER_VALUE_CHAR_OR_REPORT_ERROR(mesh_file, config->config_data.config, "mesh_file");
+
+    real_cpu start_h = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, start_h, config->config_data.config, "start_discretization");
+
+    real_cpu side_length = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, side_length, config->config_data.config, "side_length");
+
+    size_t n_points = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(size_t, n_points, config->config_data.config, "n_points");
+
+
+    sds sx_char = sdscatprintf(sdsempty(), "%lf", side_length);
+    sds sy_char = sdscatprintf(sdsempty(), "%lf", side_length);
+    sds sz_char = sdscatprintf(sdsempty(), "%lf", start_h);
+
+    shput(config->config_data.config, "side_length_x", strdup(sx_char));
+    shput(config->config_data.config, "side_length_y", strdup(sy_char));
+    shput(config->config_data.config, "side_length_z", strdup(sz_char));
+
+    config->max_dx = start_h;
+    config->max_dx_was_set = true;
+
+    config->max_dy = start_h;
+    config->max_dy_was_set = true;
+
+    config->max_dz = start_h;
+    config->max_dz_was_set = true;
+
+    config->start_dx = start_h;
+    config->start_dx_was_set = true;
+    config->start_dy = start_h;
+    config->start_dy_was_set = true;
+    config->start_dz = start_h;
+    config->start_dz_was_set = true;
+
+    initialize_grid_with_cuboid_mesh(config, the_grid);
+
+    printf("Reading mesh file %s\n", mesh_file);
+    set_custom_mesh(the_grid, mesh_file, n_points, "%lf,%lf,%lf,%lf,%d\n");
+
+    struct cell_node* grid_cell = the_grid->first_cell;
+
+    while(grid_cell != NULL) {
+        if(grid_cell->active) {
+            if (FIBROTIC(grid_cell)) {
+                grid_cell->active = false;
+            }
+        }
+        grid_cell = grid_cell->next;
+    }
+
+    return 1;
+
+}
+
+SET_SPATIAL_DOMAIN(initialize_grid_with_square_mesh_and_fibrotic_region) 
+{
+
+    real_cpu phi = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, phi, config->config_data.config, "phi");
+
+    unsigned seed = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, seed, config->config_data.config, "seed");
+
+    real min_x = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, min_x, config->config_data.config, "region_min_x");
+
+    real max_x = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, max_x, config->config_data.config, "region_max_x");
+
+    real min_y = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, min_y, config->config_data.config, "region_min_y");
+
+    real max_y = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, max_y, config->config_data.config, "region_max_y");
+
+    real min_z = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, min_z, config->config_data.config, "region_min_z");
+
+    real max_z = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, max_z, config->config_data.config, "region_max_z");
+
+    initialize_grid_with_square_mesh(config, the_grid);
+    set_plain_fibrosis_inside_region(the_grid, phi, seed, min_x, max_x, min_y, max_y, min_z, max_z);
+
+    return 1;
+}
+
+SET_SPATIAL_DOMAIN(initialize_grid_with_plain_fibrotic_mesh_using_file) 
+{
+
+    real_cpu phi = 0.0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, phi, config->config_data.config, "phi");
+
+    unsigned seed = 0;
+    GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, seed, config->config_data.config, "seed");
+
+    initialize_grid_with_square_mesh(config, the_grid);
+    set_plain_fibrosis_using_file(the_grid,"fibrotic_positions.txt");
+    //set_plain_fibrosis(the_grid, phi, seed);
+    //set_plain_fibrosis_and_write_positions_to_file(the_grid, phi, seed);
 
     return 1;
 }

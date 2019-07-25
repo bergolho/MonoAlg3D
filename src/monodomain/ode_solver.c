@@ -5,11 +5,7 @@
 #include "ode_solver.h"
 
 #include <string.h>
-#ifdef _MSC_VER
-#include "../dlfcn-win32/dlfcn.h"
-#else
 #include <dlfcn.h>
-#endif
 #include <assert.h>
 #include "../utils/file_utils.h"
 #include "../config/stim_config.h"
@@ -21,7 +17,6 @@
 #endif
 
 #include "../single_file_libraries/stb_ds.h"
-
 
 
 struct ode_solver* new_ode_solver() {
@@ -91,8 +86,6 @@ void init_ode_solver_with_cell_model(struct ode_solver* solver) {
         exit(1);
     }
 
-    print_to_stdout_and_file("Using %s as model lib\n", solver->model_data.model_library_path);
-
     solver->handle = dlopen (solver->model_data.model_library_path, RTLD_LAZY);
     if (!solver->handle) {
         fprintf(stderr, "%s\n", dlerror());
@@ -138,18 +131,6 @@ void init_ode_solver_with_cell_model(struct ode_solver* solver) {
         fprintf(stderr, "\nsolve_model_odes_gpu function not found in the provided model library\n");
         exit(1);
     }
-
-
-    free(solver->model_data.model_library_path);
-    //We don't need this anymore...
-    solver->model_data.model_library_path = NULL;
-
-    /*solver->update_gpu_fn = dlsym(solver->handle, "update_gpu_after_refinement");
-    if ((error = dlerror()) != NULL)  {
-        fputs(error, stderr);
-        fprintf(stderr, "update_gpu_after_refinement function not found in the provided model library\n");
-        exit(1);
-    }*/
 #endif
 
 }
@@ -202,8 +183,9 @@ void set_ode_initial_conditions_for_all_volumes(struct ode_solver *solver) {
 
         #pragma omp parallel for
         for(i = 0; i < num_cells; i++) {
-            soicc_fn_pt(solver->sv + (i*n_odes), solver->ode_extra_data, solver->extra_data_size);
+            soicc_fn_pt(solver->sv + (i*n_odes), i, solver->ode_extra_data, solver->extra_data_size);
         }
+
     }
 }
 
@@ -275,7 +257,7 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
     assert(ode_solver);
     assert(ode_solver->sv);
 
-    size_t num_refined_cells = arrlen(refined_this_step)/8;
+    size_t num_refined_cells = (size_t) arrlen(refined_this_step)/8;
 
     real *sv = ode_solver->sv;
     int neq = ode_solver->model_data.number_of_ode_equations;
@@ -292,7 +274,7 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
 		#pragma omp parallel for private(sv_src, sv_dst)
         for (i = 0; i < num_refined_cells; i++) {
 
-            size_t index_id = i * 8;
+            size_t index_id = i * (size_t )8;
 
             uint32_t index = refined_this_step[index_id];
             sv_src = &sv[index];
@@ -311,7 +293,7 @@ void update_state_vectors_after_refinement(struct ode_solver *ode_solver, const 
         #pragma omp parallel for private(sv_src, sv_dst)
         for (i = 0; i < num_refined_cells; i++) {
 
-            size_t index_id = i * 8;
+            size_t index_id = i * (size_t )8;
 
             uint32_t index = refined_this_step[index_id];
             sv_src = &sv[index * neq];

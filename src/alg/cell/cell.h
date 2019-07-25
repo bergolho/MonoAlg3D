@@ -39,7 +39,7 @@ struct cell_node {
 
     uint64_t bunch_number; // Bunch identifier
 
-    real_cpu center_x, center_y, center_z;
+    float center_x, center_y, center_z;
 
     void *north; // Points to cell node or transition node above this cell. Z right
     void *south; // Points to cell node or transition node below this cell. Z left
@@ -97,6 +97,17 @@ struct cell_node {
     // Variables used by some applications of partial differential equations.
     real_cpu v;
 
+    // [Berg] Variables used for propagation velocity calculation
+    real max_dvdt;
+    real activation_time;
+
+    real_cpu sigma_x;
+    real_cpu sigma_y;
+    real_cpu sigma_z;
+
+    real_cpu kappa_x;
+    real_cpu kappa_y;
+    real_cpu kappa_z;
 
 #if defined(_OPENMP)
     omp_lock_t updating;
@@ -172,6 +183,8 @@ uint8_t get_father_bunch_number (struct cell_node *first_bunch_cell);
 void simplify_derefinement(struct transition_node *transition_node);
 
 void derefine_cell_bunch (struct cell_node *first_bunch_cell, ui32_array *free_sv_positions);
+
+bool cell_has_neighbour(struct cell_node *grid_cell, void *neighbour_grid_cell);
 
 
 #endif // MONOALG3D_CELL_H
