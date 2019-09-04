@@ -391,12 +391,21 @@ void new_vtk_unstructured_grid_from_alg_grid(struct vtk_unstructured_grid **vtk_
 
             // --------------------------------------------------------------------------------
             // NEW CODE !
-            if (scalar_name == 'v')
-                arrput((*vtk_grid)->values, grid_cell->v);
-            else if (scalar_name == 'a')
-                arrput((*vtk_grid)->values, grid_cell->activation_time);
-            else
-                print_to_stderr_and_file_and_exit("[-] ERROR! Invalid scalar name!\n");
+            switch (scalar_name)
+            {
+                case 'v':
+                    arrput((*vtk_grid)->values, grid_cell->v);
+                    break;
+                case 'a':
+                    arrput((*vtk_grid)->values, grid_cell->activation_time);
+                    break;
+                case 'c':
+                    arrput((*vtk_grid)->values, grid_cell->sigma_x);
+                    break;            
+                default:
+                    print_to_stderr_and_file_and_exit("[-] ERROR! Invalid scalar name!\n");
+                    break;
+            }
             // --------------------------------------------------------------------------------
 
             //arrput((*vtk_grid)->values, grid_cell->v);
@@ -1837,3 +1846,5 @@ struct vtk_unstructured_grid * new_vtk_unstructured_grid_from_vtu_file(const cha
     return vtk_grid;
 
 }
+
+   

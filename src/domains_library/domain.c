@@ -569,8 +569,8 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_plain_fibrotic_mesh) {
     GET_PARAMETER_NUMERIC_VALUE_OR_USE_DEFAULT(unsigned, seed, config->config_data.config, "seed");
 
     initialize_grid_with_square_mesh(config, the_grid);
-    //set_plain_fibrosis(the_grid, phi, seed);
-    set_plain_fibrosis_and_write_positions_to_file(the_grid, phi, seed);
+    set_plain_fibrosis(the_grid, phi, seed);
+    //set_plain_fibrosis_and_write_positions_to_file(the_grid, phi, seed);
 
     return 1;
 }
@@ -585,22 +585,6 @@ SET_SPATIAL_DOMAIN(initialize_grid_with_plain_fibrotic_mesh_from_file) {
 
     initialize_grid_with_square_mesh(config, the_grid);
     set_fibrosis_from_file(the_grid, fib_file, fib_size);
-
-    return 1;
-}
-
-SET_SPATIAL_DOMAIN(initialize_grid_with_plain_source_sink_fibrotic_mesh) 
-{
-
-    real_cpu channel_width = 0.0;
-    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, channel_width, config->config_data.config, "channel_width");
-
-    real_cpu channel_length = 0.0;
-    GET_PARAMETER_NUMERIC_VALUE_OR_REPORT_ERROR(real_cpu, channel_length, config->config_data.config, "channel_length");
-
-
-    initialize_grid_with_square_mesh(config, the_grid);
-    set_plain_source_sink_fibrosis(the_grid, channel_width, channel_length);
 
     return 1;
 }

@@ -55,7 +55,7 @@ sds create_common_vtp_header(bool compressed, int num_points, int num_lines)
 
 void new_vtk_polydata_grid_from_purkinje_grid(struct vtk_polydata_grid **vtk_grid, struct grid *grid, bool clip_with_plain,
                                                                      float *plain_coordinates, bool clip_with_bounds,
-                                                                     float *bounds, bool read_only_values)
+                                                                     float *bounds, bool read_only_values, const char scalar_name)
 {
     static bool mesh_already_loaded =  false;
 
@@ -110,8 +110,25 @@ void new_vtk_polydata_grid_from_purkinje_grid(struct vtk_polydata_grid **vtk_gri
             center_y = grid_cell->center_y;
             center_z = grid_cell->center_z;
 
-            arrput((*vtk_grid)->values, grid_cell->v);
-
+            // --------------------------------------------------------------------------------
+            // NEW CODE !
+            switch (scalar_name)
+            {
+                case 'v':
+                    arrput((*vtk_grid)->values, grid_cell->v);
+                    break;
+                case 'a':
+                    arrput((*vtk_grid)->values, grid_cell->activation_time);
+                    break;
+                case 'c':
+                    arrput((*vtk_grid)->values, grid_cell->sigma_x);
+                    break;            
+                default:
+                    print_to_stderr_and_file_and_exit("[-] ERROR! Invalid scalar name!\n");
+                    break;
+            }
+            // --------------------------------------------------------------------------------
+            
             // This 'if' statement do not let us re-insert points and lines to the arrays ... =)
             if(mesh_already_loaded && read_only_values)
             {
