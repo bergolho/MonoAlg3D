@@ -8,7 +8,6 @@
 #include "../utils/file_utils.h"
 #include "../utils/utils.h"
 #include "../string/sds.h"
-#include "../libraries_common/config_helpers.h"
 
 #include <float.h>
 #include <math.h>
@@ -23,27 +22,28 @@
 #endif
 
 // Set a a custom Purkinje network from a file that stores its graph structure
-void set_custom_purkinje_network (struct grid *the_grid, const char *file_name, const real_cpu side_length)
+void set_custom_purkinje_network (struct grid_purkinje *the_purkinje, const char *file_name, const real_cpu side_length, const real_cpu rpmj, const real_cpu pmj_scale, const bool calc_retro_propagation)
 {
 
-//    struct cell_node *grid_cell = the_grid->first_cell;
+    struct graph *the_network = the_purkinje->the_network;
 
-    struct graph *purkinje = the_grid->the_purkinje_network;
+    set_purkinje_network_from_file(the_network,file_name,side_length,rpmj,pmj_scale,calc_retro_propagation);
 
-    set_purkinje_network_from_file(purkinje,file_name,side_length);
+    calculate_number_of_terminals(the_network);
 
-    print_to_stdout_and_file("Number of Purkinje nodes = %u\n",purkinje->total_nodes);
+    print_to_stdout_and_file("Number of Purkinje cells = %u\n",the_network->total_nodes);
+    print_to_stdout_and_file("Number of Purkinje terminals = %u\n",the_network->number_of_terminals);
 
 }
 
-void set_purkinje_network_from_file (struct graph *the_purkinje_network, const char *file_name, const real_cpu side_length)
+void set_purkinje_network_from_file (struct graph *the_purkinje_network, const char *file_name, const real_cpu side_length, const real_cpu rpmj, const real_cpu pmj_scale, const bool calc_retro_propagation)
 {
     struct graph *skeleton_network = new_graph();
 
     //read_purkinje_network_from_file(file_name,&points,&branches,&N,&E);
     build_skeleton_purkinje(file_name,skeleton_network);
 
-    build_mesh_purkinje(the_purkinje_network,skeleton_network,side_length);
+    build_mesh_purkinje(the_purkinje_network,skeleton_network,side_length,rpmj,pmj_scale,calc_retro_propagation);
     
     // Write the Purkinje to a VTK file for visualization purposes.
     write_purkinje_network_to_vtk(the_purkinje_network);
@@ -118,7 +118,7 @@ void build_skeleton_purkinje (const char *filename, struct graph *skeleton_netwo
     fclose(file);
 }
 
-void build_mesh_purkinje (struct graph *the_purkinje_network, struct graph *skeleton_network, const real_cpu side_length)
+void build_mesh_purkinje (struct graph *the_purkinje_network, struct graph *skeleton_network, const real_cpu side_length, const real_cpu rpmj, const real_cpu pmj_scale, const bool calc_retro_propagation)
 {
     assert(the_purkinje_network);
     assert(skeleton_network);
@@ -128,6 +128,10 @@ void build_mesh_purkinje (struct graph *the_purkinje_network, struct graph *skel
     // um -> cm
     //the_purkinje_network->dx = side_length*UM_TO_CM;
     the_purkinje_network->dx = side_length;
+    //the_purkinje_network->dx = side_length * 0.5;           // GAMBIARRA HARD !!!! Hermenegild
+    the_purkinje_network->rpmj = rpmj;
+    the_purkinje_network->pmj_scale = pmj_scale;
+    the_purkinje_network->calc_retropropagation = calc_retro_propagation;
 
     uint32_t n = skeleton_network->total_nodes;
     // This map is needed to deal with bifurcations
@@ -179,7 +183,8 @@ void grow_segment (struct graph *the_purkinje_network, struct node *u, struct ed
     d[1] = u->y;
     d[2] = u->z;
 
-    print_to_stdout_and_file("Node %d will grow %d points\n",u->id,n_points);
+    // DEBUG
+    //print_to_stdout_and_file("Node %d will grow %d points\n",u->id,n_points);
 
     // Grow the number of points of size 'h' until reaches the size of the segment
     for (int k = 1; k <= n_points; k++)
@@ -285,7 +290,7 @@ void write_purkinje_network_to_vtk (struct graph *the_purkinje_network)
     struct edge *e;
 
     char *filename = "meshes/purkinje_mesh.vtk";
-    print_to_stdout_and_file("[!] Purkinje mesh file will be saved in :> %s\n",filename);
+    print_to_stdout_and_file("Purkinje mesh file will be saved in :> %s\n",filename);
 
     FILE *file = fopen(filename,"w+");
     fprintf(file,"# vtk DataFile Version 3.0\n");
@@ -315,8 +320,37 @@ void write_purkinje_network_to_vtk (struct graph *the_purkinje_network)
     fclose(file);
 }
 
+void calculate_number_of_terminals (struct graph *the_purkinje_network)
+{
+    assert(the_purkinje_network);
+
+    uint32_t number_of_terminals = 0;
+
+    struct node *n;
+    struct edge *e;
+
+    n = the_purkinje_network->list_nodes;
+    while (n != NULL)
+    {
+        if (is_terminal(n))
+            number_of_terminals++;
+
+        n = n->next;
+    }
+
+    the_purkinje_network->number_of_terminals = number_of_terminals;
+}
+
+bool is_terminal (const struct node *n)
+{
+    if (n->num_edges == 1 && n->id != 0)
+        return true;
+    else
+        return false;
+}
+
 // TODO: Some test for the network will be implemented here ...
-int check_purkinje_input (const real_cpu side_length)
+int check_purkinje_input ()
 {
     return 1;
 }

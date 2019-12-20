@@ -14,15 +14,15 @@ endif(CUDA_FOUND)
 #########################################################
 
 ############## TEN TUSCHER 2004 ##############################
-set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU.c")
-set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU.cu")
-set(COMMON_HEADERS model_common.h ten_tusscher_2004.h)
+#set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU.c")
+#set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU.cu")
+#set(COMMON_HEADERS model_common.h ten_tusscher_2004.h)
 
-if(CUDA_FOUND)
-	CUDA_ADD_LIBRARY(ten_tusscher_2004_endo ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
-else()
-	ADD_LIBRARY(ten_tusscher_2004_endo ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
-endif(CUDA_FOUND)
+#if(CUDA_FOUND)
+#	CUDA_ADD_LIBRARY(ten_tusscher_2004_endo ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+#else()
+#	ADD_LIBRARY(ten_tusscher_2004_endo ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+#endif(CUDA_FOUND)
 
 #########################################################
 
@@ -62,15 +62,15 @@ endif(CUDA_FOUND)
 #########################################################
 
 ############## TEN TUSCHER 3 FIG 4B ##############################
-set(MODEL_FILE_CPU "ten_tusscher_3_Fig4b.c")
-set(MODEL_FILE_GPU "ten_tusscher_3_Fig_4b.cu")
-set (LIB_NAME "ten_tusscher_3_fig4b")
+#set(MODEL_FILE_CPU "ten_tusscher_3_Fig4b.c")
+#set(MODEL_FILE_GPU "ten_tusscher_3_Fig_4b.cu")
+#set (LIB_NAME "ten_tusscher_3_fig4b")
 
-if(CUDA_FOUND)
-    CUDA_ADD_LIBRARY( ${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h model_common.h ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
-else()
-    ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_common.h ${MODEL_FILE_CPU})
-endif(CUDA_FOUND)
+#if(CUDA_FOUND)
+#    CUDA_ADD_LIBRARY( ${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h model_common.h ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+#else()
+#    ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_common.h ${MODEL_FILE_CPU})
+#endif(CUDA_FOUND)
 #########################################################
 
 ############## FABERRUDY 2000 ##############################
@@ -141,26 +141,82 @@ else()
 endif(CUDA_FOUND)
 #########################################################
 
-############## MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM ##############################
-set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004.c")
-set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004.cu")
-set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004.h)
+############## ELNAZ MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM FOR SCENARIO 0 ##############################
+set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004_S0.c")
+set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004_S0.cu")
+set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004_S0.h)
 
-set(LIB_NAME "mixed_tentusscher_myo_epi_2004")
+set(LIB_NAME "mixed_tentusscher_myo_epi_2004_S0")
 
 if(CUDA_FOUND)
 	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
 else()
 	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
 endif(CUDA_FOUND)
-############################################################################################
+#################################################################################################################
 
-############## ELNAZ TENTUSSCHER ORIGINAL 2004 ##############################
-set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi.c")
-set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi.cu")
-set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi.h)
+############## ELNAZ MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM FOR SCENARIO 1 ##############################
+set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004_S1.c")
+set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004_S1.cu")
+set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004_S1.h)
 
-set(LIB_NAME "ten_tusscher_2004_epi")
+set(LIB_NAME "mixed_tentusscher_myo_epi_2004_S1")
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+#################################################################################################################\
+
+############## ELNAZ MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM FOR SCENARIO 2 ##############################
+set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004_S2.c")
+set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004_S2.cu")
+set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004_S2.h)
+
+set(LIB_NAME "mixed_tentusscher_myo_epi_2004_S2")
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+#################################################################################################################
+
+############## ELNAZ MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM FOR SCENARIO 3 ##############################
+set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004_S3.c")
+set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004_S3.cu")
+set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004_S3.h)
+
+set(LIB_NAME "mixed_tentusscher_myo_epi_2004_S3")
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+#################################################################################################################
+
+############## ELNAZ MIXED TENTUSSCHER 2004 MYOCARDIUM + EPICARDIUM FOR SCENARIO 3-1 ##############################
+set(MODEL_FILE_CPU "mixed_tentusscher_myo_epi_2004_S3_1.c")
+set(MODEL_FILE_GPU "mixed_tentusscher_myo_epi_2004_S3_1.cu")
+set(COMMON_HEADERS model_common.h mixed_tentusscher_myo_epi_2004_S3_1.h)
+
+set(LIB_NAME "mixed_tentusscher_myo_epi_2004_S3_1")
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+#################################################################################################################
+
+############## ELNAZ TENTUSSCHER ORIGINAL 2004 FOR SCENARIO 0 ##############################
+set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S0.c")
+set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S0.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S0.h)
+
+set(LIB_NAME "ten_tusscher_2004_epi_S0")
 
 if(CUDA_FOUND)
 	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
@@ -170,11 +226,11 @@ endif(CUDA_FOUND)
 ############################################################################################
 
 ############## ELNAZ TENTUSSCHER 2004 FOR SCENARIO 1 ##############################
-set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S1_tr6_pop69.c")
-set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S1_tr6_pop69.cu")
-set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S1_tr6_pop69.h)
+set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S1.c")
+set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S1.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S1.h)
 
-set(LIB_NAME "ten_tusscher_2004_epi_S1_tr6_pop69")
+set(LIB_NAME "ten_tusscher_2004_epi_S1")
 
 if(CUDA_FOUND)
 	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
@@ -184,11 +240,11 @@ endif(CUDA_FOUND)
 ############################################################################################
 
 ############## ELNAZ TENTUSSCHER 2004 FOR SCENARIO 2 ##############################
-set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S2_tr4_pop53.c")
-set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S2_tr4_pop53.cu")
-set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S2_tr4_pop53.h)
+set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S2.c")
+set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S2.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S2.h)
 
-set(LIB_NAME "ten_tusscher_2004_epi_S2_tr4_pop53")
+set(LIB_NAME "ten_tusscher_2004_epi_S2")
 
 if(CUDA_FOUND)
 	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
@@ -198,11 +254,25 @@ endif(CUDA_FOUND)
 ############################################################################################
 
 ############## ELNAZ TENTUSSCHER 2004 FOR SCENARIO 3 ##############################
-set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S3_tr2_pop41.c")
-set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S3_tr2_pop41.cu")
-set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S3_tr2_pop41.h)
+set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S3.c")
+set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S3.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S3.h)
 
-set(LIB_NAME "ten_tusscher_2004_epi_S3_tr2_pop41")
+set(LIB_NAME "ten_tusscher_2004_epi_S3")
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+############################################################################################
+
+############## ELNAZ TENTUSSCHER 2004 FOR SCENARIO 3.1 ##############################
+set(MODEL_FILE_CPU "ten_tusscher_2004_RS_CPU_epi_S3_1.c")
+set(MODEL_FILE_GPU "ten_tusscher_2004_RS_GPU_epi_S3_1.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_2004_epi_S3_1.h)
+
+set(LIB_NAME "ten_tusscher_2004_epi_S3_1")
 
 if(CUDA_FOUND)
 	CUDA_ADD_LIBRARY(${LIB_NAME} ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
@@ -274,3 +344,64 @@ else()
     ADD_LIBRARY(li_rudy_2011 ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
 endif(CUDA_FOUND)
 #########################################################
+
+############## PEDRO TENTUSSCHER ENDO PERCOLATION ##############################
+set(MODEL_FILE_CPU "ten_tusscher_3_percolation_ENDO_CPU.c")
+set(MODEL_FILE_GPU "ten_tusscher_3_percolation_ENDO_GPU.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_3_percolation.h)
+
+if(CUDA_FOUND)
+    CUDA_ADD_LIBRARY(ten_tusscher_3_percolation ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+        IF(MSVC)
+                set(CUDA_LIBRARIES PUBLIC ${CUDA_LIBRARIES})
+                TARGET_LINK_LIBRARIES(ten_tusscher_3_percolation PUBLIC utils)
+        endif()
+else()
+    ADD_LIBRARY(ten_tusscher_3_percolation ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+################################################################################
+
+############## SACHETTO TEN TUSCHER ENDO 2004 ##############################
+set(MODEL_FILE_CPU "ten_tusscher_3_sachetto.c")
+set(MODEL_FILE_GPU "ten_tusscher_3_sachetto.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_3_sachetto.h)
+
+if(CUDA_FOUND)
+	CUDA_ADD_LIBRARY(ten_tusscher_3_sachetto ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+else()
+	ADD_LIBRARY(ten_tusscher_3_sachetto ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+
+#########################################################
+
+############## PEDRO TENTUSSCHER ENDO SENSIBILITY ##############################
+set(MODEL_FILE_CPU "ten_tusscher_3_sensibility.c")
+set(MODEL_FILE_GPU "ten_tusscher_3_sensibility.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_3_sensibility.h)
+
+if(CUDA_FOUND)
+    CUDA_ADD_LIBRARY(ten_tusscher_3_sensibility ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+        IF(MSVC)
+                set(CUDA_LIBRARIES PUBLIC ${CUDA_LIBRARIES})
+                TARGET_LINK_LIBRARIES(ten_tusscher_3_sensibility PUBLIC utils)
+        endif()
+else()
+    ADD_LIBRARY(ten_tusscher_3_sensibility ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+################################################################################
+
+############## PEDRO TENTUSSCHER TWO REGIONS ###################################
+set(MODEL_FILE_CPU "ten_tusscher_3_two_region.c")
+set(MODEL_FILE_GPU "ten_tusscher_3_two_region.cu")
+set(COMMON_HEADERS model_common.h ten_tusscher_3_two_region.h)
+
+if(CUDA_FOUND)
+    CUDA_ADD_LIBRARY(ten_tusscher_3_two_region ${LIB_TYPE} model_gpu_utils.h ${COMMON_HEADERS} ${MODEL_FILE_GPU} ${MODEL_FILE_CPU})
+        IF(MSVC)
+                set(CUDA_LIBRARIES PUBLIC ${CUDA_LIBRARIES})
+                TARGET_LINK_LIBRARIES(ten_tusscher_3_two_region PUBLIC utils)
+        endif()
+else()
+    ADD_LIBRARY(ten_tusscher_3_two_region ${LIB_TYPE} ${COMMON_HEADERS} ${MODEL_FILE_CPU})
+endif(CUDA_FOUND)
+################################################################################

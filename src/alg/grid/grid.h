@@ -7,6 +7,7 @@
 
 #include "../cell/cell.h"
 #include "../../graph/graph.h"
+#include "../grid_purkinje/grid_purkinje.h"
 #include "../../common_types/common_types.h"
 
 #include <stdlib.h>
@@ -16,9 +17,9 @@ struct grid {
 
     struct cell_node *first_cell;     // First cell of grid.
 
-    float side_length_x;
-    float side_length_y;
-    float side_length_z;
+    struct point_3d cube_side_length;
+
+    struct point_3d mesh_side_length;
 
     uint32_t number_of_cells;  // Number of cells of grid.
 
@@ -31,16 +32,17 @@ struct grid {
     struct cell_node **active_cells;
     bool adaptive;
 
-    struct graph *the_purkinje_network;
-
+    // Purkinje section
+    struct grid_purkinje *the_purkinje;
+    
 };
 
 
 struct grid* new_grid();
-void initialize_grid(struct grid *the_grid, float side_length_x, float side_length_y, float side_length_z);
+void initialize_grid(struct grid *the_grid, struct point_3d side_length);
 void clean_and_free_grid(struct grid* the_grid);
 void construct_grid(struct grid *the_grid);
-void initialize_and_construct_grid(struct grid *the_grid, float side_length_x, float side_length_y, float side_length_z);
+void initialize_and_construct_grid(struct grid *the_grid, struct point_3d side_length);
 
 void print_grid(struct grid* the_grid, FILE *output_file);
 void print_grid_with_scar_info(struct grid *the_grid, FILE *output_file, bool binary);
@@ -49,6 +51,9 @@ void clean_grid(struct grid *the_grid);
 void order_grid_cells (struct grid *the_grid);
 
 void set_grid_flux(struct grid *the_grid);
+
+void grid_to_csr(struct grid *the_grid, real **A, int **IA, int **JA);
+
 
 bool refine_grid_with_bound(struct grid* the_grid, real_cpu refinement_bound,  real_cpu min_dx, real_cpu min_dy, real_cpu min_dz);
 void refine_grid(struct grid* the_grid, int num_steps);
@@ -74,5 +79,9 @@ void initialize_and_construct_grid_purkinje (struct grid *the_grid);
 void initialize_grid_purkinje (struct grid *the_grid);
 void construct_grid_purkinje (struct grid *the_grid);
 void translate_mesh_to_origin(struct grid *grid);
+void construct_grid_from_file(struct grid *grid, FILE *matrix_a, FILE *vector_b);
+
+struct terminal* link_purkinje_to_endocardium (struct grid *the_grid);
+void update_link_purkinje_to_endocardium (struct grid *the_grid, struct terminal *the_terminals);
 
 #endif //MONOALG3D_GRID_H
