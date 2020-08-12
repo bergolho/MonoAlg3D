@@ -74,7 +74,9 @@ outputs/
 cuboid_tt2004_gpu/
 *.ctags
 tags
-scripts/output
-scripts/animations/frames
-scripts/animations/video
 batch_simulations/
+
+meshes/02_Mouse/*
+meshes/03_Human/*
+meshes/05_Lucas/*
+
