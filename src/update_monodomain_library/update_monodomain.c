@@ -9,7 +9,7 @@
 #include "../alg/grid/grid.h"
 #include "../config/update_monodomain_config.h"
 #include "../utils/utils.h"
-#include "../single_file_libraries/stb_ds.h"
+#include "../3dparty/stb_ds.h"
 
 #ifdef COMPILE_CUDA
 #include "../gpu_utils/gpu_utils.h"
@@ -37,9 +37,8 @@ UPDATE_MONODOMAIN(update_monodomain_default) {
     }
     #endif
 
-    int i;
-    #pragma omp parallel for private(alpha)
-    for(i = 0; i < num_active_cells; i++) {
+    OMP(parallel for private(alpha))
+    for(uint32_t i = 0; i < num_active_cells; i++) {
         alpha = ALPHA(beta, cm, dt_pde, active_cells[i]->discretization.x, active_cells[i]->discretization.y, active_cells[i]->discretization.z);
 
         if(use_gpu) {
@@ -55,8 +54,8 @@ UPDATE_MONODOMAIN(update_monodomain_default) {
     #endif
 }
 
-UPDATE_MONODOMAIN(update_monodomain_ddm) 
-{
+#ifdef ENABLE_DDM
+UPDATE_MONODOMAIN(update_monodomain_ddm) {
 
     real_cpu alpha;
     bool use_gpu = the_ode_solver->gpu;
@@ -78,19 +77,19 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
     }
 #endif
 
-    int i;
-
-#pragma omp parallel for private(alpha)
-    for(i = 0; i < num_active_cells; i++)
+    OMP(parallel for private(alpha))
+    for(uint32_t i = 0; i < num_active_cells; i++)
     {
+
+
         // 1) Calculate alpha for the diagonal element
         alpha = ALPHA(beta, cm, dt_pde, active_cells[i]->discretization.x, active_cells[i]->discretization.y, active_cells[i]->discretization.z);
         
         if(use_gpu)
         {
-#ifdef COMPILE_CUDA
+            #ifdef COMPILE_CUDA
             active_cells[i]->b = vms[active_cells[i]->sv_position] * alpha;
-#endif
+            #endif
         }
         else
         {
@@ -110,7 +109,7 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
         real_cpu kappa_y = active_cells[i]->kappa.y;
         real_cpu kappa_z = active_cells[i]->kappa.z;
 
-        for (int j = 1; j < max_elements; j++)
+        for (uint32_t j = 1; j < max_elements; j++)
         {
             int k = cell_elements[j].column;
 
@@ -119,10 +118,10 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
                 real_cpu multiplier = (dx * dy) / dz;
                 if(use_gpu)
                 {
-#ifdef COMPILE_CUDA
+                    #ifdef COMPILE_CUDA
                     active_cells[i]->b -= vms[active_cells[k]->sv_position] * multiplier * kappa_z / dt_pde;
                     active_cells[i]->b += vms[active_cells[i]->sv_position] * multiplier * kappa_z / dt_pde;
-#endif
+                    #endif
                 }
                 else
                 {
@@ -135,10 +134,10 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
                 real_cpu multiplier = (dx * dy) / dz;
                 if(use_gpu)
                 {
-#ifdef COMPILE_CUDA
+                    #ifdef COMPILE_CUDA
                     active_cells[i]->b -= vms[active_cells[k]->sv_position] * multiplier * kappa_z / dt_pde;
                     active_cells[i]->b += vms[active_cells[i]->sv_position] * multiplier * kappa_z / dt_pde;
-#endif
+                    #endif
                 }
                 else
                 {
@@ -151,10 +150,10 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
                 real_cpu multiplier = (dx * dz) / dy;
                 if(use_gpu)
                 {
-#ifdef COMPILE_CUDA
+                    #ifdef COMPILE_CUDA
                     active_cells[i]->b -= vms[active_cells[k]->sv_position] * multiplier * kappa_y / dt_pde;
                     active_cells[i]->b += vms[active_cells[i]->sv_position] * multiplier * kappa_y / dt_pde;
-#endif
+                    #endif
                 }
                 else
                 {
@@ -215,6 +214,5 @@ UPDATE_MONODOMAIN(update_monodomain_ddm)
     #ifdef COMPILE_CUDA
     free(vms);
     #endif
-
 }
-
+#endif

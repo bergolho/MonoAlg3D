@@ -1,4 +1,4 @@
-# MonoAlg3D - CMake version
+# MonoAlg3D
 The MonoAlg3D is a program for solving the 3D monodomain equation by applying the Finite Volume Method.
 
 # Pre-Requisites
